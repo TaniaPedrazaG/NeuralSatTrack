@@ -4,8 +4,13 @@ import requests
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from matplotlib.animation import FuncAnimation
+import ephem
+import time
 from datetime import datetime
 
+SATELLITE_NAME = "FACSAT-2"
+LINE1 = "1 56204U 23054AC  23334.73653880  .00010712  00000+0  42191-3 0  9996"
+LINE2 = "2 56204  97.3879 227.5990 0013876 138.1327 222.0975 15.25695519 35559"
 class ISS_TrackerApp:
     def __init__(self, root):
         self.root = root
@@ -18,6 +23,7 @@ class ISS_TrackerApp:
         # Inicialización del mapa base
         self.fig = plt.Figure(figsize=(10, 5))
         self.map_ax = self.fig.add_subplot(1, 1, 1)
+        self.map_ax.set_title(SATELLITE_NAME)
 
         # Configuración del mapa
         self.world_map = Basemap(projection='mill', llcrnrlat=-80, urcrnrlat=80, llcrnrlon=-180, urcrnrlon=180, resolution='c', ax=self.map_ax)
@@ -52,6 +58,7 @@ class ISS_TrackerApp:
         # Función de actualización de la animación
         def update(frame):
             self.map_ax.clear()
+            self.map_ax.set_title(SATELLITE_NAME)
             self.world_map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
             self.world_map.drawmapboundary(color='k', linewidth=0.5, fill_color='royalblue', zorder=None, ax=None)
             self.world_map.fillcontinents(color='forestgreen',lake_color='royalblue')
@@ -71,7 +78,7 @@ class ISS_TrackerApp:
                 for i in range(len(x)-1):
                     if crosses_antimeridian(lons[i], lons[i+1]):
                         continue
-                    self.world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'w-')
+                    self.world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'w-', linewidth=0.5)
 
             # Dibujar la posición actual de la ISS en el mapa
             x, y = self.world_map(lon, lat)
@@ -82,10 +89,18 @@ class ISS_TrackerApp:
 
     # Función para obtener los datos de posición de la ISS en tiempo real
     def get_iss_position(self):
-        url = 'http://api.open-notify.org/iss-now.json'
-        response = requests.get(url)
-        data = response.json()
-        position = (float(data['iss_position']['latitude']), float(data['iss_position']['longitude']))
+        # Configuración del satélite (reemplaza los valores con los del satélite que deseas rastrear)
+
+        # Crear un objeto satélite
+        satellite = ephem.readtle(SATELLITE_NAME, LINE1, LINE2)
+
+        # Tiempo inicial
+        start_time = time.time()
+
+        satellite.compute()  # Calcular la posición del satélite
+        lat = satellite.sublat / ephem.degree  # Latitud en grados
+        lon = satellite.sublong / ephem.degree  # Longitud en grados
+        position = (float(lat), float(lon))
         return position
 
     # Función para iniciar la animación
