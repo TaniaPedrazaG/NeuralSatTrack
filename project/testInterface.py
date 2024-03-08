@@ -1,14 +1,14 @@
+import time
+import json
+import ephem
+import requests
 import tkinter as tk
 from tkinter import ttk
-from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-import requests
+from datetime import datetime
 import matplotlib.pyplot as plt
 from mpl_toolkits.basemap import Basemap
 from matplotlib.animation import FuncAnimation
-import ephem
-import time
-from datetime import datetime
-import json
+from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class AutocompleteCombobox(ttk.Combobox):
     def __init__(self, *args, **kwargs):
@@ -55,8 +55,12 @@ class AutocompleteCombobox(ttk.Combobox):
 
     def on_select(self, event=None):
         global selected_satellite
-        selected_satellite = self.get()
-        print("Selected value:", selected_satellite)
+        selected_index = self.current()
+        if selected_index >= 0:
+            selected_value = self._completion_list[selected_index]
+            selected_satellite = selected_value
+            global app
+            app.clear_trajectory()
 
 class ISS_TrackerApp:
     def __init__(self, root):
@@ -89,6 +93,7 @@ class ISS_TrackerApp:
         # Frame para el panel de checkboxes
         self.checkbox_frame = tk.Frame(self.root)
         self.checkbox_frame.grid(row=0, column=1)
+        self.checkbox_frame.config(bg="#F8F8F8") 
 
         # Variables para almacenar los estados de los checkboxes
         self.checkbox_vars = []
@@ -104,14 +109,42 @@ class ISS_TrackerApp:
                 "line_2": satellite["tle_2"]
             })
 
-        # Variable global para almacenar el satélite seleccionado
-        global selected_satellite
-        selected_satellite = tk.StringVar()
+        satellite_label = tk.StringVar()
 
         # Crear un Combobox con funcionalidad de búsqueda
-        self.satellite_combobox = AutocompleteCombobox(self.checkbox_frame, textvariable=selected_satellite)
+        self.satellite_combobox = AutocompleteCombobox(self.checkbox_frame, textvariable=satellite_label)
         self.satellite_combobox.set_completion_list(satelliteList)
         self.satellite_combobox.pack(fill=tk.BOTH, expand=True)
+
+        # Panel para mostrar información del satélite
+        self.satellite_info_panel = tk.Frame(self.checkbox_frame)
+        self.satellite_info_panel.pack(fill=tk.BOTH, expand=True, pady=10)
+        self.satellite_info_panel.config(bg="#F8F8F8") 
+
+        # Etiquetas para mostrar la información del satélite
+        self.longitude_label = tk.Label(self.satellite_info_panel, text="Longitude:")
+        self.longitude_label.grid(row=0, column=0, sticky="e")
+        self.longitude_label.config(bg="#F8F8F8") 
+        self.latitude_label = tk.Label(self.satellite_info_panel, text="Latitude:")
+        self.latitude_label.grid(row=1, column=0, sticky="e")
+        self.latitude_label.config(bg="#F8F8F8") 
+        self.direction_label = tk.Label(self.satellite_info_panel, text="Direction:")
+        self.direction_label.grid(row=2, column=0, sticky="e")
+        self.direction_label.config(bg="#F8F8F8") 
+        self.altitude_label = tk.Label(self.satellite_info_panel, text="Altitude (km):")
+        self.altitude_label.grid(row=3, column=0, sticky="e")
+        self.altitude_label.config(bg="#F8F8F8") 
+
+        # Variables para almacenar la información del satélite seleccionado
+        self.longitude_var = tk.StringVar()
+        self.latitude_var = tk.StringVar()
+        self.direction_var = tk.StringVar()
+        self.altitude_var = tk.StringVar()
+
+        # Etiquetas para mostrar la información del satélite seleccionado
+        self.longitude_info_label = tk.Label(self.satellite_info_panel, textvariable=self.longitude_var)
+        self.longitude_info_label.grid(row=0, column=1, sticky="w")
+        self.longitude_info_label.config(bg="#F8F8F8") 
 
         # Botón para iniciar la animación
         self.start_button = tk.Button(self.root, text="Iniciar", command=self.start_animation)
@@ -127,15 +160,18 @@ class ISS_TrackerApp:
         # Función para verificar si la trayectoria cruza el borde derecho hacia el izquierdo
         def crosses_antimeridian(lon1, lon2):
             return abs(lon1 - lon2) > 180
-        
-        self.satellite_name = "FACSAT-2"
-        self.line1 = "1 56204U 23054AC  23334.73653880  .00010712  00000+0  42191-3 0  9996"
-        self.line2 = "2 56204  97.3879 227.5990 0013876 138.1327 222.0975 15.25695519 35559"
+
+        global selected_satellite
+        selected_satellite = {
+            'satellite_name': 'FACSAT-2',
+            'line_1': '1 56204U 23054AC  23334.73653880  .00010712  00000+0  42191-3 0  9996',
+            'line_2': '2 56204  97.3879 227.5990 0013876 138.1327 222.0975 15.25695519 35559'
+            }
 
         # Función de actualización de la animación
         def update(frame):
             self.map_ax.clear()
-            self.map_ax.set_title(self.satellite_name)
+            self.map_ax.set_title(selected_satellite['satellite_name'])
             self.world_map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
             self.world_map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
             self.world_map.fillcontinents(color='#729951',lake_color='#2c5598')
@@ -145,7 +181,7 @@ class ISS_TrackerApp:
             self.world_map.nightshade(date)
 
             # Obtener la posición actual de la ISS
-            lat, lon = self.get_sat_position(self.satellite_name, self.line1, self.line2)
+            lat, lon = self.get_sat_position()
             self.iss_positions.append((lat, lon))
             
             # Dibujar la trayectoria de la ISS
@@ -165,13 +201,14 @@ class ISS_TrackerApp:
         self.ani = FuncAnimation(self.fig, update, frames=range(100), init_func=init, blit=False, interval=1000)
 
     # Función para obtener los datos de posición de la ISS en tiempo real
-    def get_sat_position(self, sat_name, line_1, line_2):
-        self.satellite_name = sat_name
-        self.line1 = line_1
-        self.line2 = line_2
+    def get_sat_position(self):
+        global selected_satellite
+        self.satellite_name = selected_satellite['satellite_name']
+        self.line1 = selected_satellite['line_1']
+        self.line2 = selected_satellite['line_2']
 
         # Crear un objeto satélite
-        satellite = ephem.readtle(sat_name, line_1, line_2)
+        satellite = ephem.readtle(self.satellite_name, self.line1, self.line2)
 
         # Tiempo inicial
         start_time = time.time()
@@ -185,8 +222,9 @@ class ISS_TrackerApp:
     # Función para iniciar la animación
     def start_animation(self):
         self.ani.event_source.start()
-        global selected_satellite
-        print("Satellite selected:", selected_satellite.get())
+
+    def clear_trajectory(self):
+        self.iss_positions.clear()
 
 if __name__ == "__main__":
     root = tk.Tk()
