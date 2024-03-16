@@ -67,6 +67,7 @@ class ISS_TrackerApp:
         self.root = root
         self.root.title("Satellite Tracker")
         self.root.attributes('-zoomed', True)
+        self.root.config(bg="#F8F8F8") 
 
         # Frame para el lienzo del mapa
         self.map_frame = tk.Frame(self.root)
@@ -90,10 +91,10 @@ class ISS_TrackerApp:
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.map_frame)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        # Frame para el panel de checkboxes
+        # Frame para el selector de búsqueda con scroll
         self.checkbox_frame = tk.Frame(self.root)
-        self.checkbox_frame.grid(row=0, column=1)
-        self.checkbox_frame.config(bg="#F8F8F8") 
+        self.checkbox_frame.grid(row=0, column=1, sticky="nsew", padx=10, pady=10)
+        self.checkbox_frame.config(bg="red") 
 
         # Variables para almacenar los estados de los checkboxes
         self.checkbox_vars = []
@@ -109,31 +110,49 @@ class ISS_TrackerApp:
                 "line_2": satellite["tle_2"]
             })
 
-        satellite_label = tk.StringVar()
+        # Variable global para almacenar los satélites seleccionados
+        global selected_satellites
+        selected_satellites = {}
 
-        # Crear un Combobox con funcionalidad de búsqueda
-        self.satellite_combobox = AutocompleteCombobox(self.checkbox_frame, textvariable=satellite_label)
-        self.satellite_combobox.set_completion_list(satelliteList)
-        self.satellite_combobox.pack(fill=tk.BOTH, expand=True)
+        # Crear un Canvas para el selector de búsqueda con scroll
+        self.canvas = tk.Canvas(self.checkbox_frame)
+        self.canvas.grid(row=0, column=0, sticky="nsew")
+
+        # Agregar un Scrollbar al Canvas
+        self.scrollbar = tk.Scrollbar(self.checkbox_frame, orient=tk.VERTICAL, command=self.canvas.yview)
+        self.scrollbar.grid(row=0, column=1, sticky="nsew")
+        self.canvas.config(bg="#F8F8F8") 
+        self.canvas.configure(yscrollcommand=self.scrollbar.set)
+
+        # Frame interior para los elementos del Canvas
+        self.checkbox_frame_inner = tk.Frame(self.canvas)
+
+        self.checkbox_frame_inner.config(bg="#000000") 
+        self.canvas.create_window((0, 0), window=self.checkbox_frame_inner, anchor=tk.NW)
+
+        # Crear Checkbuttons para cada satélite
+        self.checkbox_vars = {}
+        for i, satellite in enumerate(satelliteList):
+            var = tk.BooleanVar(value=False)
+            self.checkbox_vars[satellite["satellite_name"]] = var
+            checkbox = tk.Checkbutton(self.checkbox_frame_inner, text=satellite["satellite_name"], variable=var)
+            checkbox.grid(row=i, column=0, sticky="w")
+            checkbox.config(bg="#F8F8F8") 
+            checkbox.bind("<Button-1>", self.on_checkbox_click)
 
         # Panel para mostrar información del satélite
-        self.satellite_info_panel = tk.Frame(self.checkbox_frame)
-        self.satellite_info_panel.pack(fill=tk.BOTH, expand=True, pady=10)
-        self.satellite_info_panel.config(bg="#F8F8F8") 
+        self.satellite_info_panel = tk.Frame(self.checkbox_frame_inner)
+        self.satellite_info_panel.grid(row=len(satelliteList), column=0, sticky="nsew", pady=10)
 
         # Etiquetas para mostrar la información del satélite
         self.longitude_label = tk.Label(self.satellite_info_panel, text="Longitude:")
         self.longitude_label.grid(row=0, column=0, sticky="e")
-        self.longitude_label.config(bg="#F8F8F8") 
         self.latitude_label = tk.Label(self.satellite_info_panel, text="Latitude:")
         self.latitude_label.grid(row=1, column=0, sticky="e")
-        self.latitude_label.config(bg="#F8F8F8") 
         self.direction_label = tk.Label(self.satellite_info_panel, text="Direction:")
         self.direction_label.grid(row=2, column=0, sticky="e")
-        self.direction_label.config(bg="#F8F8F8") 
         self.altitude_label = tk.Label(self.satellite_info_panel, text="Altitude (km):")
         self.altitude_label.grid(row=3, column=0, sticky="e")
-        self.altitude_label.config(bg="#F8F8F8") 
 
         # Variables para almacenar la información del satélite seleccionado
         self.longitude_var = tk.StringVar()
@@ -144,7 +163,12 @@ class ISS_TrackerApp:
         # Etiquetas para mostrar la información del satélite seleccionado
         self.longitude_info_label = tk.Label(self.satellite_info_panel, textvariable=self.longitude_var)
         self.longitude_info_label.grid(row=0, column=1, sticky="w")
-        self.longitude_info_label.config(bg="#F8F8F8") 
+        self.latitude_info_label = tk.Label(self.satellite_info_panel, textvariable=self.latitude_var)
+        self.latitude_info_label.grid(row=1, column=1, sticky="w")
+        self.direction_info_label = tk.Label(self.satellite_info_panel, textvariable=self.direction_var)
+        self.direction_info_label.grid(row=2, column=1, sticky="w")
+        self.altitude_info_label = tk.Label(self.satellite_info_panel, textvariable=self.altitude_var)
+        self.altitude_info_label.grid(row=3, column=1, sticky="w") 
 
         # Botón para iniciar la animación
         self.start_button = tk.Button(self.root, text="Iniciar", command=self.start_animation)
@@ -225,6 +249,12 @@ class ISS_TrackerApp:
 
     def clear_trajectory(self):
         self.iss_positions.clear()
+
+    def on_checkbox_click(self, event):
+        global selected_satellites
+        for satellite_name, var in self.checkbox_vars.items():
+            selected_satellites[satellite_name] = var.get()
+        print("Selected satellites:", selected_satellites)
 
 if __name__ == "__main__":
     root = tk.Tk()
