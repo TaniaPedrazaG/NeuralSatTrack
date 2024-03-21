@@ -3,6 +3,7 @@ import ephem
 import datetime
 import tkinter as tk
 import ttkbootstrap as ttk
+from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
 from ttkbootstrap.constants import *
 from mpl_toolkits.basemap import Basemap
@@ -29,7 +30,7 @@ class AppInterface:
             }
 
         # Inicializacion frame para el lienzo del mapa
-        self.map_frame = ttk.Frame(root, width=200, height=200)
+        self.map_frame = ttk.Frame(root, width=400, height=200)
         self.map_frame.grid(row=0, column=0, columnspan=2, sticky="nsew")
 
         # Inicializacion del mapa base
@@ -104,7 +105,7 @@ class AppInterface:
         sorted_satelliteList = sorted(satelliteList, key=lambda x: x['satellite_name'])
 
         # Variable de control para los checkboxes
-        selected_checkbox = tk.IntVar()
+        selected_checkbox = ''
 
         # Función para imprimir el valor del checkbox seleccionado
         def handle_checkbox():
@@ -194,5 +195,8 @@ class AppInterface:
 
 if __name__ == "__main__":
     root = ttk.Window(themename="darkly")
+    ico = Image.open('./assets/sat-orbit.png')
+    photo = ImageTk.PhotoImage(ico)
+    root.wm_iconphoto(False, photo)
     app = AppInterface(root)
     root.mainloop()
