@@ -3,11 +3,11 @@ import ephem
 import datetime
 import tkinter as tk
 import ttkbootstrap as ttk
-from PIL import Image, ImageTk
 import matplotlib.pyplot as plt
 from ttkbootstrap.constants import *
 from mpl_toolkits.basemap import Basemap
 from matplotlib.animation import FuncAnimation
+from tktimepicker import AnalogPicker, AnalogThemes, constants
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 class AppInterface:
@@ -22,12 +22,30 @@ class AppInterface:
 
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
+        satelliteList = []
+        with open('data/tle_data.json') as f:
+            data = json.load(f)
+
+        for satellite in data:
+            satelliteList.append({
+                "satellite_name": satellite["satellite_name"],
+                "line_1": satellite["tle_1"],
+                "line_2": satellite["tle_2"]
+            })
+
+        satelliteList_cleaned = [dict(t) for t in {tuple(d.items()) for d in satelliteList}]
+
+        sorted_satelliteList = sorted(satelliteList_cleaned, key=lambda x: x['satellite_name'])
+
+        for i, elemento in enumerate(sorted_satelliteList):
+            if elemento['satellite_name'] == 'ISS (ZARYA)':
+                position = i
+                break
+            else:
+                position = 0
+
         global selected_satellite
-        selected_satellite = {
-            'satellite_name': 'FACSAT-2',
-            'line_1': '1 56204U 23054AC  23334.73653880  .00010712  00000+0  42191-3 0  9996',
-            'line_2': '2 56204  97.3879 227.5990 0013876 138.1327 222.0975 15.25695519 35559'
-            }
+        selected_satellite = sorted_satelliteList[position]
 
         # Inicializacion frame para el lienzo del mapa
         self.map_frame = ttk.Frame(root, width=400, height=200)
@@ -51,37 +69,64 @@ class AppInterface:
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.map_frame)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
 
-        self.data_frame = ttk.Frame(root, width=200, height=200, padding=20)
+        self.data_frame = ttk.Frame(root, width=100, height=200, padding=20)
         self.data_frame.grid(row=1, column=0 ,sticky="nsew")
 
         self.title_label = ttk.Label(self.data_frame, text=selected_satellite['satellite_name'], bootstyle=WARNING, justify="center")
-        self.title_label.pack(side='top', pady=5, fill="x")
+        self.title_label.grid(row=0, column=0, columnspan=3, sticky="nsew", pady=2)
 
         self.separator = ttk.Separator(self.data_frame, bootstyle=WARNING)
-        self.separator.pack(side='top', pady=5, fill="x")
+        self.separator.grid(row=1, column=0, columnspan=3, sticky=EW, pady=5)
 
         self.latitude = ttk.Label(self.data_frame, text='Latitud: ', bootstyle=WARNING, justify="center")
-        self.latitude.pack(side='top', pady=5, fill="x")
+        self.latitude.grid(row=2, column=0, columnspan=2, sticky=W, pady=2)
 
         self.longitude = ttk.Label(self.data_frame, text='Longuitud: ', bootstyle=WARNING, justify="center")
-        self.longitude.pack(side='top', pady=5, fill="x")
+        self.longitude.grid(row=2, column=2, sticky=EW, pady=2, padx=20)
         
-        self.controll_frame = ttk.Frame(root, width=200, height=200, bootstyle=DARK)
+        self.controll_frame = ttk.Frame(root, width=300, height=200)
         self.controll_frame.grid(row=1, column=1, sticky="nsew")
 
+        self.real_time = ttk.Button(self.controll_frame, text='Tiempo real', bootstyle=WARNING, padding=5)
+        self.real_time.grid(row=0, column=0, columnspan=3, sticky=NSEW, padx=5, pady=10)
+
+        self.prediction = ttk.Button(self.controll_frame, text='Predicción', bootstyle=WARNING, padding=5)
+        self.prediction.grid(row=0, column=3, columnspan=3, sticky=NSEW, padx=5, pady=10)
+
+        current_time = self.date.strftime("%m/%d/%Y  %H:%M:%S")
+
+        self.prediction_date = ttk.Entry(self.controll_frame, bootstyle=WARNING, textvariable=current_time)
+        self.prediction_date.grid(row=1, column=0, columnspan=2, sticky=NSEW, padx=5, pady=10)
+
+        self.prediction_date.delete(0, tk.END)
+        self.prediction_date.insert(0, current_time)
+
+        time_var = ttk.StringVar()
+        time_var.set('1')
+        self.time = ttk.Spinbox(self.controll_frame, bootstyle=WARNING, from_=1, to=60, textvariable=time_var)
+        self.time.grid(row=1, column=2, columnspan=2, sticky=NSEW, padx=5, pady=10)
+
+        self.measure = ttk.Combobox(self.controll_frame, bootstyle=WARNING, values=['Segundos', 'Minutos', 'Horas'])
+        self.measure.current(0)
+        self.measure.grid(row=1, column=4, columnspan=2, sticky=NSEW, padx=5, pady=10)
+
+        self.stepper = ttk.Button(self.controll_frame, text='\u23ed Paso a paso', bootstyle=WARNING, padding=5)
+        self.stepper.grid(row=2, column=0, columnspan=3, sticky=NSEW, padx=5, pady=10)
+
+        self.automatic = ttk.Button(self.controll_frame, text='\u23f5 Automático', bootstyle=WARNING, padding=5)
+        self.automatic.grid(row=2, column=3, columnspan=3, sticky=NSEW, padx=5, pady=10)
+
         # Inicializacion frame para el listado de checkbox(satelites)
-        self.checkbox_frame = ttk.Frame(root, width=100, height=400)
+        self.checkbox_frame = ttk.Frame(root, width=100, height=400, padding=[0, 10, 0, 10])
         self.checkbox_frame.grid(row=0, column=2, rowspan=2, sticky="nsew")
 
         self.scrollbar = ttk.Scrollbar(self.checkbox_frame, orient="vertical", bootstyle="warning, round")
         self.scrollbar.pack(side="right", fill="y")
 
-        # Crear un lienzo para los checkboxes
         canvas = tk.Canvas(self.checkbox_frame, yscrollcommand=self.scrollbar.set)
         checkbox_frame = ttk.Frame(canvas, style='TCheckbutton')
         self.scrollbar.config(command=canvas.yview)
 
-        # Colocar el lienzo en el frame y el frame en el lienzo
         canvas.pack(side="left", fill="both", expand=True)
         canvas.create_window((0, 0), window=checkbox_frame, anchor="nw")
 
@@ -91,21 +136,8 @@ class AppInterface:
 
         checkbox_frame.bind("<Configure>", configure_scroll_region)
 
-        satelliteList = []
-        with open('data/tle_data.json') as f:
-            data = json.load(f)
-
-        for satellite in data:
-            satelliteList.append({
-                "satellite_name": satellite["satellite_name"],
-                "line_1": satellite["tle_1"],
-                "line_2": satellite["tle_2"]
-            })
-
-        sorted_satelliteList = sorted(satelliteList, key=lambda x: x['satellite_name'])
-
         # Variable de control para los checkboxes
-        selected_checkbox = ''
+        selected_checkbox = tk.IntVar(root, position)
 
         # Función para imprimir el valor del checkbox seleccionado
         def handle_checkbox():
@@ -170,6 +202,7 @@ class AppInterface:
             # Dibujar la posición actual de la ISS en el mapa
             x, y = self.world_map(lon, lat)
             self.world_map.plot(x, y, 'wo', markersize=8)
+            self.map_ax.text(x * 1.05, y * 1.05, selected_satellite['satellite_name'], color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
 
         # Crear la animación
         self.ani = FuncAnimation(self.fig, update, frames=range(100), init_func=init, blit=False, interval=1000)
@@ -192,11 +225,3 @@ class AppInterface:
 
     def clear_trajectory(self):
         self.iss_positions.clear()
-
-if __name__ == "__main__":
-    root = ttk.Window(themename="darkly")
-    ico = Image.open('./assets/sat-orbit.png')
-    photo = ImageTk.PhotoImage(ico)
-    root.wm_iconphoto(False, photo)
-    app = AppInterface(root)
-    root.mainloop()
