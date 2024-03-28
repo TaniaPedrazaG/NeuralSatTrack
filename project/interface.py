@@ -23,7 +23,7 @@ class AppInterface:
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
         satelliteList = []
-        with open('data/tle_data.json') as f:
+        with open('data/satnogs.json') as f:
             data = json.load(f)
 
         for satellite in data:
@@ -52,7 +52,7 @@ class AppInterface:
         self.map_frame.grid(row=0, column=0, columnspan=2, sticky="nsew")
 
         # Inicializacion del mapa base
-        self.fig = plt.Figure(figsize=(15, 8), facecolor=(.133, .133, .133))
+        self.fig = plt.Figure(figsize=(15, 8))
         self.map_ax = self.fig.add_subplot(1, 1, 1)
 
         # Configuración del mapa
@@ -60,8 +60,8 @@ class AppInterface:
         self.world_map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
         self.world_map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
         self.world_map.fillcontinents(color='#729951',lake_color='#2c5598')
-        self.world_map.drawparallels(range(-90, 91, 30), textcolor='#F8F8F8', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
-        self.world_map.drawmeridians(range(-180, 181, 30), textcolor='#F8F8F8', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
+        self.world_map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
+        self.world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
         self.date = datetime.datetime.now()
         self.world_map.nightshade(self.date)
 
@@ -72,30 +72,30 @@ class AppInterface:
         self.data_frame = ttk.Frame(root, width=100, height=200, padding=20)
         self.data_frame.grid(row=1, column=0 ,sticky="nsew")
 
-        self.title_label = ttk.Label(self.data_frame, text=selected_satellite['satellite_name'], bootstyle=WARNING, justify="center")
+        self.title_label = ttk.Label(self.data_frame, text=selected_satellite['satellite_name'], bootstyle=DARK, justify="center")
         self.title_label.grid(row=0, column=0, columnspan=3, sticky="nsew", pady=2)
 
-        self.separator = ttk.Separator(self.data_frame, bootstyle=WARNING)
+        self.separator = ttk.Separator(self.data_frame, bootstyle=DARK)
         self.separator.grid(row=1, column=0, columnspan=3, sticky=EW, pady=5)
 
-        self.latitude = ttk.Label(self.data_frame, text='Latitud: ', bootstyle=WARNING, justify="center")
+        self.latitude = ttk.Label(self.data_frame, text='Latitud: ', bootstyle=DARK, justify="center")
         self.latitude.grid(row=2, column=0, columnspan=2, sticky=W, pady=2)
 
-        self.longitude = ttk.Label(self.data_frame, text='Longuitud: ', bootstyle=WARNING, justify="center")
+        self.longitude = ttk.Label(self.data_frame, text='Longuitud: ', bootstyle=DARK, justify="center")
         self.longitude.grid(row=2, column=2, sticky=EW, pady=2, padx=20)
         
         self.controll_frame = ttk.Frame(root, width=300, height=200)
         self.controll_frame.grid(row=1, column=1, sticky="nsew")
 
-        self.real_time = ttk.Button(self.controll_frame, text='Tiempo real', bootstyle=WARNING, padding=5)
+        self.real_time = ttk.Button(self.controll_frame, text='Tiempo real', bootstyle=DARK, padding=5)
         self.real_time.grid(row=0, column=0, columnspan=3, sticky=NSEW, padx=5, pady=10)
 
-        self.prediction = ttk.Button(self.controll_frame, text='Predicción', bootstyle=WARNING, padding=5)
+        self.prediction = ttk.Button(self.controll_frame, text='Predicción', bootstyle=DARK, padding=5)
         self.prediction.grid(row=0, column=3, columnspan=3, sticky=NSEW, padx=5, pady=10)
 
         current_time = self.date.strftime("%m/%d/%Y  %H:%M:%S")
 
-        self.prediction_date = ttk.Entry(self.controll_frame, bootstyle=WARNING, textvariable=current_time)
+        self.prediction_date = ttk.Entry(self.controll_frame, bootstyle=DARK, textvariable=current_time)
         self.prediction_date.grid(row=1, column=0, columnspan=2, sticky=NSEW, padx=5, pady=10)
 
         self.prediction_date.delete(0, tk.END)
@@ -103,17 +103,17 @@ class AppInterface:
 
         time_var = ttk.StringVar()
         time_var.set('1')
-        self.time = ttk.Spinbox(self.controll_frame, bootstyle=WARNING, from_=1, to=60, textvariable=time_var)
+        self.time = ttk.Spinbox(self.controll_frame, bootstyle=DARK, from_=1, to=60, textvariable=time_var)
         self.time.grid(row=1, column=2, columnspan=2, sticky=NSEW, padx=5, pady=10)
 
-        self.measure = ttk.Combobox(self.controll_frame, bootstyle=WARNING, values=['Segundos', 'Minutos', 'Horas'])
+        self.measure = ttk.Combobox(self.controll_frame, bootstyle=DARK, values=['Segundos', 'Minutos', 'Horas'])
         self.measure.current(0)
         self.measure.grid(row=1, column=4, columnspan=2, sticky=NSEW, padx=5, pady=10)
 
-        self.stepper = ttk.Button(self.controll_frame, text='\u23ed Paso a paso', bootstyle=WARNING, padding=5)
+        self.stepper = ttk.Button(self.controll_frame, text='\u23ed Paso a paso', bootstyle=DARK, padding=5)
         self.stepper.grid(row=2, column=0, columnspan=3, sticky=NSEW, padx=5, pady=10)
 
-        self.automatic = ttk.Button(self.controll_frame, text='\u23f5 Automático', bootstyle=WARNING, padding=5)
+        self.automatic = ttk.Button(self.controll_frame, text='\u23f5 Automático', bootstyle=DARK, padding=5)
         self.automatic.grid(row=2, column=3, columnspan=3, sticky=NSEW, padx=5, pady=10)
 
         # Inicializacion frame para el listado de checkbox(satelites)
@@ -156,7 +156,7 @@ class AppInterface:
                 variable=selected_checkbox,
                 onvalue=index,
                 command=handle_checkbox,
-                bootstyle=WARNING
+                bootstyle=DARK
             )
             checkbox.grid(row=index, column=0, sticky="w")
 
@@ -174,12 +174,12 @@ class AppInterface:
         # Función de actualización de la animación
         def update(frame):
             self.map_ax.clear()
-            self.map_ax.set_title(self.date.strftime("%m-%d-%Y  %H:%M:%S"), loc="right", pad="10",fontdict = {'fontsize':10, 'color':'#F8F8F8'})
+            self.map_ax.set_title(self.date.strftime("%m-%d-%Y  %H:%M:%S"), loc="right", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
             self.world_map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
             self.world_map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
             self.world_map.fillcontinents(color='#729951',lake_color='#2c5598')
-            self.world_map.drawparallels(range(-90, 91, 30), textcolor='#F8F8F8', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
-            self.world_map.drawmeridians(range(-180, 181, 30), textcolor='#F8F8F8', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
+            self.world_map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
+            self.world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
             self.date = datetime.datetime.now()
             self.world_map.nightshade(self.date)
 
