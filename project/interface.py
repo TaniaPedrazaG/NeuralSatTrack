@@ -1,15 +1,19 @@
 import json
+import math
 import ephem
 import datetime
+import numpy as np
 import tkinter as tk
 import ttkbootstrap as ttk
 import matplotlib.pyplot as plt
 from ttkbootstrap.constants import *
 from mpl_toolkits.basemap import Basemap
 from matplotlib.animation import FuncAnimation
-from tktimepicker import AnalogPicker, AnalogThemes, constants
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+from RNN import RNNPrediction
+
+import geocoder
 class AppInterface:
     def __init__(self, root):
         self.root = root
@@ -19,6 +23,12 @@ class AppInterface:
         self.root.grid_rowconfigure(1, weight=1)
         self.root.grid_columnconfigure(0, weight=1)
         self.root.grid_columnconfigure(1, weight=1)
+
+        self.rnn_instance = RNNPrediction()
+
+        obs_lon, obs_lat = self.observer_location()
+
+        obs_city = self.get_city_name(obs_lon, obs_lat)
 
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
@@ -78,12 +88,15 @@ class AppInterface:
         self.separator = ttk.Separator(self.data_frame, bootstyle=DARK)
         self.separator.grid(row=1, column=0, columnspan=3, sticky=EW, pady=5)
 
-        self.latitude = ttk.Label(self.data_frame, text='Latitud: ', bootstyle=DARK, justify="center")
+        self.latitude = ttk.Label(self.data_frame, text='Latitud: ---', bootstyle=DARK, justify="center")
         self.latitude.grid(row=2, column=0, columnspan=2, sticky=W, pady=2)
 
-        self.longitude = ttk.Label(self.data_frame, text='Longuitud: ', bootstyle=DARK, justify="center")
+        self.longitude = ttk.Label(self.data_frame, text='Longuitud: ---', bootstyle=DARK, justify="center")
         self.longitude.grid(row=2, column=2, sticky=EW, pady=2, padx=20)
-        
+
+        self.azimut = ttk.Label(self.data_frame, text='Azimut: ---', bootstyle=DARK, justify="center")
+        self.azimut.grid(row=3, column=0, columnspan=2, sticky=W, pady=2)
+
         self.controll_frame = ttk.Frame(root, width=300, height=200)
         self.controll_frame.grid(row=1, column=1, sticky="nsew")
 
@@ -113,14 +126,14 @@ class AppInterface:
         self.stepper = ttk.Button(self.controll_frame, text='\u23ed Paso a paso', bootstyle=DARK, padding=5)
         self.stepper.grid(row=2, column=0, columnspan=3, sticky=NSEW, padx=5, pady=10)
 
-        self.automatic = ttk.Button(self.controll_frame, text='\u23f5 Automático', bootstyle=DARK, padding=5)
+        self.automatic = ttk.Button(self.controll_frame, text='\u23f5 Automático', bootstyle=DARK, padding=5, command=self.use_prediction)
         self.automatic.grid(row=2, column=3, columnspan=3, sticky=NSEW, padx=5, pady=10)
 
         # Inicializacion frame para el listado de checkbox(satelites)
         self.checkbox_frame = ttk.Frame(root, width=100, height=400, padding=[0, 10, 0, 10])
         self.checkbox_frame.grid(row=0, column=2, rowspan=2, sticky="nsew")
 
-        self.scrollbar = ttk.Scrollbar(self.checkbox_frame, orient="vertical", bootstyle="warning, round")
+        self.scrollbar = ttk.Scrollbar(self.checkbox_frame, orient="vertical", bootstyle="DARK, round")
         self.scrollbar.pack(side="right", fill="y")
 
         canvas = tk.Canvas(self.checkbox_frame, yscrollcommand=self.scrollbar.set)
@@ -174,7 +187,8 @@ class AppInterface:
         # Función de actualización de la animación
         def update(frame):
             self.map_ax.clear()
-            self.map_ax.set_title(self.date.strftime("%m-%d-%Y  %H:%M:%S"), loc="right", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
+            self.map_ax.set_title((f"{obs_city}, {abs(obs_lat):.4f}° {'S' if obs_lat < 0 else 'N'}, {abs(obs_lon):.4f}° {'O' if obs_lon < 0 else 'E'}"), loc="left", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
+            self.map_ax.set_title(self.date.strftime("%Y-%m-%d  %H:%M:%S"), loc="right", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
             self.world_map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
             self.world_map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
             self.world_map.fillcontinents(color='#729951',lake_color='#2c5598')
@@ -185,8 +199,10 @@ class AppInterface:
 
             # Obtener la posición actual de la ISS
             lat, lon = self.get_sat_position()
+            azimut_grades = math.atan((math.tan(lon - obs_lon)) / (math.sin(obs_lat)))
             self.latitude.config(text=(f"{'Latitud: '}{abs(lat):.4f}° {'S' if lat < 0 else 'N'}"))
-            self.longitude.config(text=(f"{'Longuitud: '}{abs(lon):.4f}° {'W' if lon < 0 else 'E'}"))
+            self.longitude.config(text=(f"{'Longuitud: '}{abs(lon):.4f}° {'O' if lon < 0 else 'E'}"))
+            self.azimut.config(text=(f"{'Azimut: '}{azimut_grades:.4f}°"))
             self.iss_positions.append((lat, lon))
             self.direction = ''
             # Dibujar la trayectoria de la ISS
@@ -201,7 +217,7 @@ class AppInterface:
 
             # Dibujar la posición actual de la ISS en el mapa
             x, y = self.world_map(lon, lat)
-            self.world_map.plot(x, y, 'wo', markersize=8)
+            self.world_map.plot(x, y, 'wo', markersize=5)
             self.map_ax.text(x * 1.05, y * 1.05, selected_satellite['satellite_name'], color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
 
         # Crear la animación
@@ -222,6 +238,24 @@ class AppInterface:
         lon = satellite.sublong / ephem.degree  # Longitud en grados
         position = (float(lat), float(lon))
         return position
+    
+    def get_orbital_trace(self):
+        global selected_satellite
+        distance = 6371.0 + 400
+        area_segmento = 2 * math.pi * 6371.0 * distance
+        return area_segmento
 
     def clear_trajectory(self):
         self.iss_positions.clear()
+
+    def use_prediction(self):
+        global selected_satellite
+        prediction = self.rnn_instance.predict_orbit(selected_satellite)
+
+    def observer_location(self):
+        g = geocoder.ip('me')
+        return g.latlng
+    
+    def get_city_name(self, lat, lon):
+        g = geocoder.osm([lat, lon], method='reverse')
+        return g.city
