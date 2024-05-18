@@ -1,20 +1,22 @@
 import json
+import time
 import math
 import ephem
 import datetime
-import numpy as np
 import tkinter as tk
 import ttkbootstrap as ttk
 import matplotlib.pyplot as plt
 from ttkbootstrap.constants import *
+from geopy.geocoders import Nominatim
+from matplotlib.patches import Ellipse
 from mpl_toolkits.basemap import Basemap
 from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from RNN import RNNPrediction
 
-import geocoder
 class AppInterface:
+
     def __init__(self, root):
         self.root = root
         self.root.title("NeuralSatTrack")
@@ -28,7 +30,7 @@ class AppInterface:
 
         obs_lon, obs_lat = self.observer_location()
 
-        obs_city = self.get_city_name(obs_lon, obs_lat)
+        obs_city = 'Sogamoso'
 
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
@@ -205,6 +207,7 @@ class AppInterface:
             self.azimut.config(text=(f"{'Azimut: '}{azimut_grades:.4f}°"))
             self.iss_positions.append((lat, lon))
             self.direction = ''
+
             # Dibujar la trayectoria de la ISS
             if len(self.iss_positions) > 1:
                 lats, lons = zip(*self.iss_positions)
@@ -237,6 +240,18 @@ class AppInterface:
         lat = satellite.sublat / ephem.degree  # Latitud en grados
         lon = satellite.sublong / ephem.degree  # Longitud en grados
         position = (float(lat), float(lon))
+
+        new_data = {
+            'lon': float(lon),
+            'lat': float(lat),
+            'timestamp': time.time(),
+        }
+
+        file_name = 'data/train_' + self.satellite_name + '.json'
+        actual_data = self.read_json_data(file_name)
+        self.add_data(actual_data, new_data)
+        self.write_json_data(file_name, actual_data)
+
         return position
     
     def get_orbital_trace(self):
@@ -253,9 +268,21 @@ class AppInterface:
         prediction = self.rnn_instance.predict_orbit(selected_satellite)
 
     def observer_location(self):
-        g = geocoder.ip('me')
-        return g.latlng
+        geolocator = Nominatim(user_agent="MyApp")
+        loc = geolocator.geocode('Sogamoso')
+        return {loc.longitude, loc.latitude}
     
-    def get_city_name(self, lat, lon):
-        g = geocoder.osm([lat, lon], method='reverse')
-        return g.city
+    def read_json_data(self, name_file):
+        try:
+            with open(name_file, 'r') as archivo:
+                datos = json.load(archivo)
+        except FileNotFoundError:
+            datos = []
+        return datos
+
+    def write_json_data(self, name_file, data):
+        with open(name_file, 'w') as archivo:
+            json.dump(data, archivo, indent=3)
+
+    def add_data(self, data, new_data):
+        data.append(new_data)
