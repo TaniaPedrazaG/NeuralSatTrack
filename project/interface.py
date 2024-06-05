@@ -1,22 +1,17 @@
 import json
-import time
-import math
-import ephem
 import datetime
 import tkinter as tk
 import ttkbootstrap as ttk
 import matplotlib.pyplot as plt
 from ttkbootstrap.constants import *
-from geopy.geocoders import Nominatim
-from matplotlib.patches import Ellipse
 from mpl_toolkits.basemap import Basemap
 from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from RNN import RNNPrediction
+from satelliteCalculated import *
 
 class AppInterface:
-
     def __init__(self, root):
         self.root = root
         self.root.title("NeuralSatTrack")
@@ -28,9 +23,9 @@ class AppInterface:
 
         self.rnn_instance = RNNPrediction()
 
-        obs_lon, obs_lat = self.observer_location()
+        et_lon, et_lat = observer_location()
 
-        obs_city = 'Sogamoso'
+        et_city = 'Sogamoso'
 
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
@@ -75,7 +70,8 @@ class AppInterface:
         self.world_map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
         self.world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
         self.date = datetime.datetime.now()
-        self.world_map.nightshade(self.date)
+        utc_time = datetime.datetime.utcnow()
+        self.world_map.nightshade(utc_time)
 
         # Inicializacion frame para los controles
         self.canvas = FigureCanvasTkAgg(self.fig, master=self.map_frame)
@@ -96,8 +92,17 @@ class AppInterface:
         self.longitude = ttk.Label(self.data_frame, text='Longuitud: ---', bootstyle=DARK, justify="center")
         self.longitude.grid(row=2, column=2, sticky=EW, pady=2, padx=20)
 
+        self.altitude = ttk.Label(self.data_frame, text='Altura (km): ---', bootstyle=DARK, justify="center")
+        self.altitude.grid(row=3, column=0, columnspan=2, sticky=W, pady=2)
+
+        self.velocity = ttk.Label(self.data_frame, text='Velocidad (km/s): ---', bootstyle=DARK, justify="center")
+        self.velocity.grid(row=3, column=2, sticky=EW, pady=2, padx=20)
+
         self.azimut = ttk.Label(self.data_frame, text='Azimut: ---', bootstyle=DARK, justify="center")
-        self.azimut.grid(row=3, column=0, columnspan=2, sticky=W, pady=2)
+        self.azimut.grid(row=4, column=0, columnspan=2, sticky=W, pady=2)
+
+        self.elevation = ttk.Label(self.data_frame, text='Elevación: ---', bootstyle=DARK, justify="center")
+        self.elevation.grid(row=4, column=2, sticky=EW, pady=2, padx=20)
 
         self.controll_frame = ttk.Frame(root, width=300, height=200)
         self.controll_frame.grid(row=1, column=1, sticky="nsew")
@@ -189,7 +194,7 @@ class AppInterface:
         # Función de actualización de la animación
         def update(frame):
             self.map_ax.clear()
-            self.map_ax.set_title((f"{obs_city}, {abs(obs_lat):.4f}° {'S' if obs_lat < 0 else 'N'}, {abs(obs_lon):.4f}° {'O' if obs_lon < 0 else 'E'}"), loc="left", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
+            self.map_ax.set_title((f"{et_city}, {abs(et_lat):.4f}° {'S' if et_lat < 0 else 'N'}, {abs(et_lon):.4f}° {'W' if et_lon < 0 else 'E'}"), loc="left", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
             self.map_ax.set_title(self.date.strftime("%Y-%m-%d  %H:%M:%S"), loc="right", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
             self.world_map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
             self.world_map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
@@ -197,18 +202,21 @@ class AppInterface:
             self.world_map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
             self.world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
             self.date = datetime.datetime.now()
-            self.world_map.nightshade(self.date)
+            self.world_map.nightshade(utc_time)
 
             # Obtener la posición actual de la ISS
-            lat, lon = self.get_sat_position()
-            azimut_grades = math.atan((math.tan(lon - obs_lon)) / (math.sin(obs_lat)))
+            lat, lon, alt, vel = get_sat_position(selected_satellite, et_lat, et_lon)
+            azimut_degrees = calculate_azimut(et_lat, et_lon, lat, lon)
+            elevation_degrees = get_elevation(lon)
             self.latitude.config(text=(f"{'Latitud: '}{abs(lat):.4f}° {'S' if lat < 0 else 'N'}"))
-            self.longitude.config(text=(f"{'Longuitud: '}{abs(lon):.4f}° {'O' if lon < 0 else 'E'}"))
-            self.azimut.config(text=(f"{'Azimut: '}{azimut_grades:.4f}°"))
+            self.longitude.config(text=(f"{'Longuitud: '}{abs(lon):.4f}° {'W' if lon < 0 else 'E'}"))
+            self.altitude.config(text=(f"{'Altura (km): '}{alt:.4f}"))
+            self.velocity.config(text=(f"{'Velocidad (km/s): '}{vel:.4f}"))
+            self.azimut.config(text=(f"{'Azimut: '}{abs(azimut_degrees):.2f}°"))
+            self.elevation.config(text=(f"{'Elevacion: '}{elevation_degrees:.4f}"))
             self.iss_positions.append((lat, lon))
             self.direction = ''
 
-            # Dibujar la trayectoria de la ISS
             if len(self.iss_positions) > 1:
                 lats, lons = zip(*self.iss_positions)
                 x, y = self.world_map(list(lons), list(lats))
@@ -218,47 +226,15 @@ class AppInterface:
                         continue
                     self.world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'w-', linewidth=0.5)
 
-            # Dibujar la posición actual de la ISS en el mapa
             x, y = self.world_map(lon, lat)
             self.world_map.plot(x, y, 'wo', markersize=5)
             self.map_ax.text(x * 1.05, y * 1.05, selected_satellite['satellite_name'], color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
+            x, y = self.world_map(et_lon, et_lat)
+            self.world_map.plot(x, y, 'w', markersize=5, marker='+')
+            self.map_ax.text(x * 1.02, y * 1.02, et_city, color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
 
         # Crear la animación
         self.ani = FuncAnimation(self.fig, update, frames=range(100), init_func=init, blit=False, interval=1000)
-
-    # Función para obtener los datos de posición de la ISS en tiempo real
-    def get_sat_position(self):
-        global selected_satellite
-        self.satellite_name = selected_satellite['satellite_name']
-        self.line1 = selected_satellite['line_1']
-        self.line2 = selected_satellite['line_2']
-
-        # Crear un objeto satélite
-        satellite = ephem.readtle(self.satellite_name, self.line1, self.line2)
-
-        satellite.compute()  # Calcular la posición del satélite
-        lat = satellite.sublat / ephem.degree  # Latitud en grados
-        lon = satellite.sublong / ephem.degree  # Longitud en grados
-        position = (float(lat), float(lon))
-
-        new_data = {
-            'lon': float(lon),
-            'lat': float(lat),
-            'timestamp': time.time(),
-        }
-
-        file_name = 'data/train_' + self.satellite_name + '.json'
-        actual_data = self.read_json_data(file_name)
-        self.add_data(actual_data, new_data)
-        self.write_json_data(file_name, actual_data)
-
-        return position
-    
-    def get_orbital_trace(self):
-        global selected_satellite
-        distance = 6371.0 + 400
-        area_segmento = 2 * math.pi * 6371.0 * distance
-        return area_segmento
 
     def clear_trajectory(self):
         self.iss_positions.clear()
@@ -266,23 +242,3 @@ class AppInterface:
     def use_prediction(self):
         global selected_satellite
         prediction = self.rnn_instance.predict_orbit(selected_satellite)
-
-    def observer_location(self):
-        geolocator = Nominatim(user_agent="MyApp")
-        loc = geolocator.geocode('Sogamoso')
-        return {loc.longitude, loc.latitude}
-    
-    def read_json_data(self, name_file):
-        try:
-            with open(name_file, 'r') as archivo:
-                datos = json.load(archivo)
-        except FileNotFoundError:
-            datos = []
-        return datos
-
-    def write_json_data(self, name_file, data):
-        with open(name_file, 'w') as archivo:
-            json.dump(data, archivo, indent=3)
-
-    def add_data(self, data, new_data):
-        data.append(new_data)
