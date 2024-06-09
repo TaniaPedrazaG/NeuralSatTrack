@@ -92,10 +92,10 @@ class AppInterface:
         self.longitude = ttk.Label(self.data_frame, text='Longuitud: ---', bootstyle=DARK, justify="center")
         self.longitude.grid(row=2, column=2, sticky=EW, pady=2, padx=20)
 
-        self.altitude = ttk.Label(self.data_frame, text='Altura (km): ---', bootstyle=DARK, justify="center")
+        self.altitude = ttk.Label(self.data_frame, text='Distancia: ---', bootstyle=DARK, justify="center")
         self.altitude.grid(row=3, column=0, columnspan=2, sticky=W, pady=2)
 
-        self.velocity = ttk.Label(self.data_frame, text='Velocidad (km/s): ---', bootstyle=DARK, justify="center")
+        self.velocity = ttk.Label(self.data_frame, text='Velocidad: ---', bootstyle=DARK, justify="center")
         self.velocity.grid(row=3, column=2, sticky=EW, pady=2, padx=20)
 
         self.azimut = ttk.Label(self.data_frame, text='Azimut: ---', bootstyle=DARK, justify="center")
@@ -193,6 +193,8 @@ class AppInterface:
 
         # Función de actualización de la animación
         def update(frame):
+            lat, lon, dist, vel, elv, az = get_satellite_data(selected_satellite)
+
             self.map_ax.clear()
             self.map_ax.set_title((f"{et_city}, {abs(et_lat):.4f}° {'S' if et_lat < 0 else 'N'}, {abs(et_lon):.4f}° {'W' if et_lon < 0 else 'E'}"), loc="left", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
             self.map_ax.set_title(self.date.strftime("%Y-%m-%d  %H:%M:%S"), loc="right", pad="10",fontdict = {'fontsize':10, 'color':'#373a3c'})
@@ -204,16 +206,12 @@ class AppInterface:
             self.date = datetime.datetime.now()
             self.world_map.nightshade(utc_time)
 
-            # Obtener la posición actual de la ISS
-            lat, lon, alt, vel = get_sat_position(selected_satellite, et_lat, et_lon)
-            azimut_degrees = calculate_azimut(et_lat, et_lon, lat, lon)
-            elevation_degrees = get_elevation(lon)
             self.latitude.config(text=(f"{'Latitud: '}{abs(lat):.4f}° {'S' if lat < 0 else 'N'}"))
             self.longitude.config(text=(f"{'Longuitud: '}{abs(lon):.4f}° {'W' if lon < 0 else 'E'}"))
-            self.altitude.config(text=(f"{'Altura (km): '}{alt:.4f}"))
-            self.velocity.config(text=(f"{'Velocidad (km/s): '}{vel:.4f}"))
-            self.azimut.config(text=(f"{'Azimut: '}{abs(azimut_degrees):.2f}°"))
-            self.elevation.config(text=(f"{'Elevacion: '}{elevation_degrees:.4f}"))
+            self.altitude.config(text=(f"{'Distancia: '}{dist:.2f} km"))
+            self.velocity.config(text=(f"{'Velocidad: '}{vel:.0f} km/h"))
+            self.azimut.config(text=(f"{'Azimut: '}{az:.2f}°"))
+            self.elevation.config(text=(f"{'Elevacion: '}{elv:.2f}°"))
             self.iss_positions.append((lat, lon))
             self.direction = ''
 
@@ -228,10 +226,10 @@ class AppInterface:
 
             x, y = self.world_map(lon, lat)
             self.world_map.plot(x, y, 'wo', markersize=5)
-            self.map_ax.text(x * 1.05, y * 1.05, selected_satellite['satellite_name'], color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
+            self.map_ax.text(x + 80000, y + 80000, selected_satellite['satellite_name'], color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
             x, y = self.world_map(et_lon, et_lat)
             self.world_map.plot(x, y, 'w', markersize=5, marker='+')
-            self.map_ax.text(x * 1.02, y * 1.02, et_city, color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
+            self.map_ax.text(x + 80000, y + 80000, et_city, color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
 
         # Crear la animación
         self.ani = FuncAnimation(self.fig, update, frames=range(100), init_func=init, blit=False, interval=1000)

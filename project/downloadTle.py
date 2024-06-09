@@ -13,7 +13,7 @@ tle_urls = [
 ]
 
 class DownloadTLE:
-    def __init__(self, root):
+    def __init__(self, root) -> None:
         self.root = root
         self.root.title("Confirmar")
 
