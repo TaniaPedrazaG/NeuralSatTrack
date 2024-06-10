@@ -1,11 +1,8 @@
 import json
 import math
-import time
-import ephem
 import datetime
 from sgp4.api import jday
 from sgp4.api import Satrec
-
 from skyfield.api import EarthSatellite, load, wgs84
 
 def add_data(data, new_data):
