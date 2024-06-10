@@ -91,7 +91,7 @@ def get_satellite_data(selected_satellite):
         'timestamp': t.utc_strftime('%Y-%m-%d %H:%M:%S'),
     }
 
-    file_name = 'data/train_' + satellite_name + '.json'
+    file_name = 'training/train_' + satellite_name + '.json'
     current_data = read_json_data(file_name)
     add_data(current_data, new_data)
     write_json_data(file_name, current_data)

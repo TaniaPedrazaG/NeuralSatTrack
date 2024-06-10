@@ -1,13 +1,13 @@
 import ttkbootstrap as ttk
 from PIL import Image, ImageTk
-import interface
 import downloadTle
+import interface
 
 root = ttk.Window(themename="cosmo")
 ico = Image.open('./assets/sat-orbit.png')
 photo = ImageTk.PhotoImage(ico)
 root.wm_iconphoto(False, photo)
-interface.AppInterface(root)
+interface.Interface(root)
 
 def open_confirmation():
     main_width = root.winfo_width()
