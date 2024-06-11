@@ -224,12 +224,12 @@ class Interface:
             world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
             world_map.nightshade(datetime.datetime.now(timezone.utc))
 
-            sat_lat_value.config(text=(f"{'Latitud: '}{abs(lat):.4f}° {'S' if lat < 0 else 'N'}"))
-            sat_lon_value.config(text=(f"{'Longuitud: '}{abs(lon):.4f}° {'W' if lon < 0 else 'E'}"))
-            dist_value.config(text=(f"{'Distancia: '}{dist:.2f}"))
-            vel_value.config(text=(f"{'Velocidad: '}{vel:.0f}"))
-            az_value.config(text=(f"{'Azimut: '}{az:.2f}°"))
-            el_value.config(text=(f"{'Elevacion: '}{elv:.2f}°"))
+            sat_lat_value.config(text=(f"{abs(lat):.4f}° {'S' if lat < 0 else 'N'}"))
+            sat_lon_value.config(text=(f"{abs(lon):.4f}° {'W' if lon < 0 else 'E'}"))
+            dist_value.config(text=(f"{dist:.2f}"))
+            vel_value.config(text=(f"{vel:.0f}"))
+            az_value.config(text=(f"{az:.2f}°"))
+            el_value.config(text=(f"{elv:.2f}°"))
             iss_positions.append((lat, lon))
 
             if len(iss_positions) > 1:
