@@ -1,4 +1,3 @@
-import os
 import json
 import tkinter as tk
 import ttkbootstrap as ttk
@@ -20,147 +19,82 @@ class Interface:
         root.columnconfigure(0, weight=1)
         root.columnconfigure(1, weight=1)
         root.rowconfigure(0, weight=1)
-
+        
         iss_positions = []
         satelliteList = []
         global selected_satellite
         rnn_instance = RNNPrediction()
 
+        et_lon, et_lat = observer_location()
+        et_city = 'Sogamoso'
+
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
         """ ---------- LIST_MODULE ----------"""
 
-        list_module = ttk.Frame(root, width=50)
-        list_module.grid(row=0, column=2, rowspan=3, sticky=NSEW, padx=10, pady=10)
+        checkbox_frame = ttk.Frame(root, width=100, height=400, padding=[0, 10, 0, 10])
+        checkbox_frame.grid(row=0, column=2, rowspan=3, sticky="nsew")
 
-        scrollbar = ttk.Scrollbar(list_module, orient="vertical", bootstyle="DARK, round")
-        scrollbar.pack(side=RIGHT, fill=Y)
+        scrollbar = ttk.Scrollbar(checkbox_frame, orient="vertical", bootstyle="DARK, round")
+        scrollbar.pack(side="right", fill="y")
 
-        canvas = tk.Canvas(list_module, yscrollcommand=scrollbar.set)
-        list_module = ttk.Frame(canvas, style='TCheckbutton')
+        canvas = tk.Canvas(checkbox_frame, yscrollcommand=scrollbar.set)
+        checkbox_frame = ttk.Frame(canvas, style='TCheckbutton')
         scrollbar.config(command=canvas.yview)
 
-        canvas.pack(side=LEFT, fill=BOTH, expand=True)
-        canvas.create_window((0, 0), window=list_module, anchor=NW)
+        canvas.pack(side="left", fill="both", expand=True)
+        canvas.create_window((0, 0), window=checkbox_frame, anchor="nw")
 
         def configure_scroll_region(event):
             canvas.configure(scrollregion=canvas.bbox("all"))
 
-        list_module.bind("<Configure>", configure_scroll_region)
+        checkbox_frame.bind("<Configure>", configure_scroll_region)
 
-        for filename in os.listdir('data'):
-            if filename.endswith('.json'):
-                filepath = os.path.join('data', filename)
-                try:
-                    with open(filepath, 'r') as file:
-                        data = json.load(file)
+        with open('data/satnogs.json') as f:
+            data = json.load(f)
 
-                    for satellite in data:
-                        satelliteList.append({
-                            "satellite_name": satellite["satellite_name"],
-                            "line_1": satellite["tle_1"],
-                            "line_2": satellite["tle_2"]
-                        })
+        for satellite in data:
+            satelliteList.append({
+                "satellite_name": satellite["satellite_name"],
+                "line_1": satellite["tle_1"],
+                "line_2": satellite["tle_2"]
+            })
 
-                    satelliteList_cleaned = [dict(t) for t in {tuple(d.items()) for d in satelliteList}]
-                    sorted_satelliteList = sorted(satelliteList_cleaned, key=lambda x: x['satellite_name'])
+        satelliteList_cleaned = [dict(t) for t in {tuple(d.items()) for d in satelliteList}]
+        sorted_satelliteList = sorted(satelliteList_cleaned, key=lambda x: x['satellite_name'])
 
-                    for i, elemento in enumerate(sorted_satelliteList):
-                        if elemento['satellite_name'] == 'ISS (ZARYA)':
-                            position = i
-                            break
-                        else:
-                            position = 0
-                    
-                    selected_checkbox = tk.IntVar(root, position)
-                    selected_satellite = sorted_satelliteList[position]
+        for i, element in enumerate(sorted_satelliteList):
+            if element['satellite_name'] == 'ISS (ZARYA)':
+                position = i
+                break
+            else:
+                position = 0
 
-                    def clear_trajectory():
-                        iss_positions.clear()
+        selected_checkbox = tk.IntVar(root, position)
+        selected_satellite = sorted_satelliteList[position]
 
-                    def handle_checkbox():
-                        global selected_satellite
-                        index = selected_checkbox.get()
-                        satellite = sorted_satelliteList[index]
-                        selected_satellite =  satellite
-                        clear_trajectory()
 
-                    for index, data in enumerate(sorted_satelliteList):
-                        checkbox = ttk.Checkbutton(
-                            list_module,
-                            text=data["satellite_name"],
-                            variable=selected_checkbox,
-                            onvalue=index,
-                            command=handle_checkbox,
-                            bootstyle=DARK
-                        )
-                        checkbox.grid(row=index, column=0, sticky="w")
-                except Exception as e:
-                    print(f"Error al leer {filename}: {e}")
+        def clear_trajectory():
+            iss_positions.clear()
 
-        """ ---------- MAP_MODULE ----------"""
+        def handle_checkbox():
+            global selected_satellite
+            index = selected_checkbox.get()
+            satellite = sorted_satelliteList[index]
+            selected_satellite =  satellite
+            clear_trajectory()
 
-        map_module = ttk.Frame(root)
-        map_module.grid(row=0, column=0, columnspan=2, sticky=NSEW)
-
-        fig = plt.Figure()
-
-        map_ax = fig.add_subplot(111)
-
-        map = Basemap(projection='gall',llcrnrlat=-90,urcrnrlat=90,llcrnrlon=-180,urcrnrlon=180,resolution='c', ax=map_ax)
-        map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
-        map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
-        map.fillcontinents(color='#729951',lake_color='#2c5598')
-        map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
-        map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
-        map.nightshade(datetime.datetime.now(timezone.utc))
-
-        map_canvas = FigureCanvasTkAgg(fig, master=map_module)
-        map_canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
-
-        def init_animation():
-            return []
-        
-        def crosses_antimeridian(lon1, lon2):
-            return abs(lon1 - lon2) > 180
-
-        def update(frame):
-            lat, lon, dist, vel, elv, az = get_satellite_data(selected_satellite)
-            iss_positions.append((lat, lon))
-
-            sat_lon_value.config(text=(f"{abs(lon):.4f}° {'W' if lon < 0 else 'E'}"))
-            sat_lat_value.config(text=(f"{abs(lat):.4f}° {'S' if lat < 0 else 'N'}"))
-            dist_value.config(text=(f"{dist:.2f}"))
-            vel_value.config(text=(f"{vel:.0f}"))
-            az_value.config(text=(f"{az:.2f}°"))
-            el_value.config(text=(f"{elv:.2f}°"))
-
-            map_ax.clear()
-            map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
-            map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
-            map.fillcontinents(color='#729951',lake_color='#2c5598')
-            map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
-            map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
-            map.nightshade(datetime.datetime.now(timezone.utc))
-
-            if len(iss_positions) > 1:
-                lats, lons = zip(*iss_positions)
-                x, y = map(list(lons), list(lats))
-                for i in range(len(x)-1):
-                    if crosses_antimeridian(lons[i], lons[i+1]):
-                        continue
-                    map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'w-', linewidth=0.5)
-
-            x, y = map(lon, lat)
-            map.plot(x, y, 'wo', markersize=5)
-            map_ax.text(x + 80000, y + 80000, selected_satellite['satellite_name'], color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
-            x, y = map(et_lon, et_lat)
-            map.plot(x, y, 'w', markersize=5, marker='+')
-            map_ax.text(x + 80000, y + 80000, et_city, color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
-
-        anim = FuncAnimation(fig, update, frames=range(100), init_func=init_animation, blit=False, interval=1000)
-        plt.show()
-
+        for index, data in enumerate(sorted_satelliteList):
+            checkbox = ttk.Checkbutton(
+                checkbox_frame,
+                text=data["satellite_name"],
+                variable=selected_checkbox,
+                onvalue=index,
+                command=handle_checkbox,
+                bootstyle=DARK
+            )
+            checkbox.grid(row=index, column=0, sticky="w")
+            
         """ ---------- INFO_MODULE ----------"""
 
         info_module = ttk.Frame(root, height=40)
@@ -181,37 +115,40 @@ class Interface:
         data_module.grid(row=2, column=0, sticky=NSEW, padx=20, pady=10)
 
         sat_name = ttk.Label(data_module, text=selected_satellite['satellite_name'], font=('Helvetica', 12, 'bold'))
-        sat_name.grid(row=0, column=0, sticky=W, pady=2)
+        sat_name.grid(row=0, column=0, sticky=EW, pady=2)
+
+        separator = ttk.Separator(data_module, bootstyle=DARK)
+        separator.grid(row=1, column=0, columnspan=2, sticky=NSEW, pady=5)
 
         sat_lon = ttk.Label(data_module, text='Longuitud:', font=('Helvetica', 11, 'bold'))
-        sat_lon.grid(row=1, column=0, sticky=W, pady=2)
+        sat_lon.grid(row=2, column=0, sticky=W, pady=2)
         sat_lon_value = ttk.Label(data_module, text='---')
-        sat_lon_value.grid(row=1, column=1, sticky=EW, padx=5, pady=2)
+        sat_lon_value.grid(row=2, column=1, sticky=EW, padx=5, pady=2)
 
         sat_lat = ttk.Label(data_module, text='Latitud:', font=('Helvetica', 11, 'bold'))
-        sat_lat.grid(row=1, column=3, sticky=W, padx=20, pady=2)
+        sat_lat.grid(row=2, column=3, sticky=W, padx=20, pady=2)
         sat_lat_value = ttk.Label(data_module, text='---')
-        sat_lat_value.grid(row=1, column=4, sticky=EW, padx=5, pady=2)
+        sat_lat_value.grid(row=2, column=4, sticky=EW, padx=5, pady=2)
 
         dist = ttk.Label(data_module, text='Altura (km):', font=('Helvetica', 11, 'bold'))
-        dist.grid(row=2, column=0, sticky=W, pady=2)
+        dist.grid(row=3, column=0, sticky=W, pady=2)
         dist_value = ttk.Label(data_module, text='---')
-        dist_value.grid(row=2, column=1, sticky=EW, padx=5, pady=2)
+        dist_value.grid(row=3, column=1, sticky=EW, padx=5, pady=2)
 
         vel = ttk.Label(data_module, text='Velocidad (km/h):', font=('Helvetica', 11, 'bold'))
-        vel.grid(row=2, column=3, sticky=W, padx=20, pady=2)
+        vel.grid(row=3, column=3, sticky=W, padx=20, pady=2)
         vel_value = ttk.Label(data_module, text='---')
-        vel_value.grid(row=2, column=4, sticky=EW, padx=5, pady=2)
+        vel_value.grid(row=3, column=4, sticky=EW, padx=5, pady=2)
 
         az = ttk.Label(data_module, text='Azimut:', font=('Helvetica', 11, 'bold'))
-        az.grid(row=3, column=0, sticky=W, pady=2)
+        az.grid(row=4, column=0, sticky=W, pady=2)
         az_value = ttk.Label(data_module, text='---')
-        az_value.grid(row=3, column=1, sticky=EW, padx=5, pady=2)
+        az_value.grid(row=4, column=1, sticky=EW, padx=5, pady=2)
 
         el = ttk.Label(data_module, text='Elevacion:', font=('Helvetica', 11, 'bold'))
-        el.grid(row=3, column=3, sticky=W, padx=20, pady=2)
+        el.grid(row=4, column=3, sticky=W, padx=20, pady=2)
         el_value = ttk.Label(data_module, text='---')
-        el_value.grid(row=3, column=4, sticky=EW, padx=5, pady=2)
+        el_value.grid(row=4, column=4, sticky=EW, padx=5, pady=2)
 
         """ ---------- CONTROL_MODULE ----------"""
 
@@ -249,10 +186,69 @@ class Interface:
         stepper = ttk.Button(control_module, text='\u23ed Paso a paso', bootstyle=DARK, padding=5)
         stepper.grid(row=2, column=0, columnspan=3, sticky=NSEW, padx=5, pady=10)
 
-        def use_prediction():
-            global selected_satellite
-            prediction = rnn_instance.predict_orbit(selected_satellite)
-
-        automatic = ttk.Button(control_module, text='\u23f5 Automático', bootstyle=DARK, padding=5, command=use_prediction)
+        automatic = ttk.Button(control_module, text='\u23f5 Automático', bootstyle=DARK, padding=5, command=self.use_prediction)
         automatic.grid(row=2, column=3, columnspan=3, sticky=NSEW, padx=5, pady=10)
 
+        """ ---------- MAP_MODULE ----------"""
+
+        map_frame = ttk.Frame(root, width=400, height=200)
+        map_frame.grid(row=0, column=0, columnspan=2, sticky="nsew")
+        
+        fig = plt.Figure(figsize=(15, 8))
+        map_ax = fig.add_subplot(1, 1, 1)
+        
+        world_map = Basemap(projection='gall', llcrnrlat=-90, urcrnrlat=90, llcrnrlon=-180, urcrnrlon=180, resolution='c', ax=map_ax)
+        world_map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
+        world_map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
+        world_map.fillcontinents(color='#729951',lake_color='#2c5598')
+        world_map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
+        world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
+        world_map.nightshade(datetime.datetime.now(timezone.utc))
+        
+        self.canvas = FigureCanvasTkAgg(fig, master=map_frame)
+        self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
+        
+        def init():
+            return []
+        
+        def crosses_antimeridian(lon1, lon2):
+            return abs(lon1 - lon2) > 180
+        
+        def update(frame):
+            lat, lon, dist, vel, elv, az = get_satellite_data(selected_satellite)
+            map_ax.clear()
+            world_map.drawcoastlines(linewidth=0.5, linestyle='solid', color='k', antialiased=1, ax=None, zorder=None)
+            world_map.drawmapboundary(color='k', linewidth=0.5, fill_color='#2c5598', zorder=None, ax=None)
+            world_map.fillcontinents(color='#729951',lake_color='#2c5598')
+            world_map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
+            world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
+            world_map.nightshade(datetime.datetime.now(timezone.utc))
+
+            sat_lat_value.config(text=(f"{'Latitud: '}{abs(lat):.4f}° {'S' if lat < 0 else 'N'}"))
+            sat_lon_value.config(text=(f"{'Longuitud: '}{abs(lon):.4f}° {'W' if lon < 0 else 'E'}"))
+            dist_value.config(text=(f"{'Distancia: '}{dist:.2f}"))
+            vel_value.config(text=(f"{'Velocidad: '}{vel:.0f}"))
+            az_value.config(text=(f"{'Azimut: '}{az:.2f}°"))
+            el_value.config(text=(f"{'Elevacion: '}{elv:.2f}°"))
+            iss_positions.append((lat, lon))
+
+            if len(iss_positions) > 1:
+                lats, lons = zip(*iss_positions)
+                x, y = world_map(list(lons), list(lats))
+                for i in range(len(x)-1):
+                    if crosses_antimeridian(lons[i], lons[i+1]):
+                        continue
+                    world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'w-', linewidth=0.5)
+
+            x, y = world_map(lon, lat)
+            world_map.plot(x, y, 'wo', markersize=5)
+            map_ax.text(x + 80000, y + 80000, selected_satellite['satellite_name'], color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
+            x, y = world_map(et_lon, et_lat)
+            world_map.plot(x, y, 'w', markersize=5, marker='+')
+            map_ax.text(x + 80000, y + 80000, et_city, color='white', fontsize=8, fontweight='semibold', ha='left', va='bottom')
+
+        self.ani = FuncAnimation(fig, update, frames=range(100), init_func=init, blit=False, interval=1000)
+
+    def use_prediction(self):
+        global selected_satellite
+        prediction = self.rnn_instance.predict_orbit(selected_satellite)
