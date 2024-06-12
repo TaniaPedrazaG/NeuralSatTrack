@@ -1,8 +1,9 @@
-import re
 import os
+import re
 import json
 import requests
 import ttkbootstrap as ttk
+from datetime import datetime
 from ttkbootstrap.constants import *
 
 tle_urls = [
@@ -10,6 +11,7 @@ tle_urls = [
     'https://celestrak.org/NORAD/elements/gp.php?GROUP=education&FORMAT=tle',
     'https://celestrak.org/NORAD/elements/gp.php?GROUP=engineering&FORMAT=tle',
     'https://celestrak.org/NORAD/elements/gp.php?GROUP=weather&FORMAT=tle',
+    'https://celestrak.org/NORAD/elements/gp.php?GROUP=intelsat&FORMAT=tle'
 ]
 
 class DownloadTLE:
@@ -52,14 +54,21 @@ class DownloadTLE:
                     print(f"No se pudo obtener el contenido de: {json_filename}")
             close_window()
 
+        path_TLE = 'data/'
+        timestamp_creation = os.path.getmtime(path_TLE)
+        creation_date = datetime.fromtimestamp(timestamp_creation)
+
         confirm_frame = ttk.Frame(root, padding=20)
         confirm_frame.grid(row=0, column=0)
 
-        paragraph = ttk.Label(confirm_frame, text="¿Desea ejecutar una actualización de los TLE?")
+        paragraph = ttk.Label(confirm_frame, text="¿Desea ejecutar una actualización de los TLE?", anchor=CENTER, font=("Helvetica", 12))
         paragraph.grid(row=0, column=0, sticky=NSEW, columnspan=3, padx=10, pady=10)
 
+        last_update = ttk.Label(confirm_frame, text=("Ultima actualización: {}".format(creation_date.date())), anchor=CENTER, font=("Helvetica", 10))
+        last_update.grid(row=1, column=0, sticky=NSEW, columnspan=3, padx=10, pady=10)
+
         yes = ttk.Button(confirm_frame, text='Sí', bootstyle=SUCCESS, padding=[15, 10], command=download_tle)
-        yes.grid(row=1, column=0, sticky=NSEW)
+        yes.grid(row=2, column=0, sticky=NSEW)
 
         no = ttk.Button(confirm_frame, text='No', bootstyle=DANGER, padding=[15, 10], command=close_window)
-        no.grid(row=1, column=2, sticky=NSEW)
+        no.grid(row=2, column=2, sticky=NSEW)
