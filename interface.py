@@ -25,15 +25,12 @@ class Interface:
         global selected_satellite
         rnn_instance = RNNPrediction()
 
-        et_lon, et_lat = observer_location()
-        et_city = 'Sogamoso'
-
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
         """ ---------- LIST_MODULE ----------"""
 
         checkbox_frame = ttk.Frame(root, width=100, height=400, padding=[0, 10, 0, 10])
-        checkbox_frame.grid(row=0, column=2, rowspan=3, sticky="nsew")
+        checkbox_frame.grid(row=0, column=2, rowspan=3, sticky="NSEW")
 
         scrollbar = ttk.Scrollbar(checkbox_frame, orient="vertical", bootstyle="DARK, round")
         scrollbar.pack(side="right", fill="y")
@@ -50,7 +47,7 @@ class Interface:
 
         checkbox_frame.bind("<Configure>", configure_scroll_region)
 
-        with open('data/satnogs.json') as f:
+        with open('data/intelsat.json') as f:
             data = json.load(f)
 
         for satellite in data:
@@ -73,7 +70,6 @@ class Interface:
         selected_checkbox = tk.IntVar(root, position)
         selected_satellite = sorted_satelliteList[position]
 
-
         def clear_trajectory():
             iss_positions.clear()
 
@@ -81,7 +77,7 @@ class Interface:
             global selected_satellite
             index = selected_checkbox.get()
             satellite = sorted_satelliteList[index]
-            selected_satellite =  satellite
+            selected_satellite = satellite
             clear_trajectory()
 
         for index, data in enumerate(sorted_satelliteList):
@@ -91,108 +87,108 @@ class Interface:
                 variable=selected_checkbox,
                 onvalue=index,
                 command=handle_checkbox,
-                bootstyle=DARK
+                bootstyle="DARK"
             )
             checkbox.grid(row=index, column=0, sticky="w")
             
         """ ---------- INFO_MODULE ----------"""
 
         info_module = ttk.Frame(root, height=40)
-        info_module.grid(row=1, column=0, columnspan=2, sticky=NSEW, padx=20, pady=10)
+        info_module.grid(row=1, column=0, columnspan=2, sticky="NSEW", padx=20, pady=10)
 
         et_lon, et_lat = observer_location()
-        et_city = 'Sogamoso'
+        et_city = 'Bogotá'
 
         et_location = ttk.Label(info_module, text=(f"{et_city}, {abs(et_lat):.4f}° {'S' if et_lat < 0 else 'N'}, {abs(et_lon):.4f}° {'W' if et_lon < 0 else 'E'}"), font=('Helvetica', 10, 'bold'))
-        et_location.pack(side=LEFT)
+        et_location.pack(side="left")
 
         local_time = ttk.Label(info_module, text=datetime.datetime.now().strftime("%Y-%m-%d  %H:%M:%S"), font=('Helvetica', 10, 'bold'))
-        local_time.pack(side=RIGHT)
+        local_time.pack(side="right")
 
         """ ---------- DATA_MODULE ----------"""
 
         data_module = ttk.Frame(root)
-        data_module.grid(row=2, column=0, sticky=NSEW, padx=20, pady=10)
+        data_module.grid(row=2, column=0, sticky="NSEW", padx=20, pady=10)
 
         sat_name = ttk.Label(data_module, text=selected_satellite['satellite_name'], font=('Helvetica', 12, 'bold'))
-        sat_name.grid(row=0, column=0, sticky=EW, pady=2)
+        sat_name.grid(row=0, column=0, sticky="EW", pady=2)
 
-        separator = ttk.Separator(data_module, bootstyle=DARK)
-        separator.grid(row=1, column=0, columnspan=2, sticky=NSEW, pady=5)
+        separator = ttk.Separator(data_module, bootstyle="DARK")
+        separator.grid(row=1, column=0, columnspan=2, sticky="NSEW", pady=5)
 
         sat_lon = ttk.Label(data_module, text='Longuitud:', font=('Helvetica', 11, 'bold'))
-        sat_lon.grid(row=2, column=0, sticky=W, pady=2)
+        sat_lon.grid(row=2, column=0, sticky="W", pady=2)
         sat_lon_value = ttk.Label(data_module, text='---')
-        sat_lon_value.grid(row=2, column=1, sticky=EW, padx=5, pady=2)
+        sat_lon_value.grid(row=2, column=1, sticky="EW", padx=5, pady=2)
 
         sat_lat = ttk.Label(data_module, text='Latitud:', font=('Helvetica', 11, 'bold'))
-        sat_lat.grid(row=2, column=3, sticky=W, padx=20, pady=2)
+        sat_lat.grid(row=2, column=3, sticky="W", padx=20, pady=2)
         sat_lat_value = ttk.Label(data_module, text='---')
-        sat_lat_value.grid(row=2, column=4, sticky=EW, padx=5, pady=2)
+        sat_lat_value.grid(row=2, column=4, sticky="EW", padx=5, pady=2)
 
         dist = ttk.Label(data_module, text='Altura (km):', font=('Helvetica', 11, 'bold'))
-        dist.grid(row=3, column=0, sticky=W, pady=2)
+        dist.grid(row=3, column=0, sticky="W", pady=2)
         dist_value = ttk.Label(data_module, text='---')
-        dist_value.grid(row=3, column=1, sticky=EW, padx=5, pady=2)
+        dist_value.grid(row=3, column=1, sticky="EW", padx=5, pady=2)
 
         vel = ttk.Label(data_module, text='Velocidad (km/h):', font=('Helvetica', 11, 'bold'))
-        vel.grid(row=3, column=3, sticky=W, padx=20, pady=2)
+        vel.grid(row=3, column=3, sticky="W", padx=20, pady=2)
         vel_value = ttk.Label(data_module, text='---')
-        vel_value.grid(row=3, column=4, sticky=EW, padx=5, pady=2)
+        vel_value.grid(row=3, column=4, sticky="EW", padx=5, pady=2)
 
         az = ttk.Label(data_module, text='Azimut:', font=('Helvetica', 11, 'bold'))
-        az.grid(row=4, column=0, sticky=W, pady=2)
+        az.grid(row=4, column=0, sticky="W", pady=2)
         az_value = ttk.Label(data_module, text='---')
-        az_value.grid(row=4, column=1, sticky=EW, padx=5, pady=2)
+        az_value.grid(row=4, column=1, sticky="EW", padx=5, pady=2)
 
         el = ttk.Label(data_module, text='Elevacion:', font=('Helvetica', 11, 'bold'))
-        el.grid(row=4, column=3, sticky=W, padx=20, pady=2)
+        el.grid(row=4, column=3, sticky="W", padx=20, pady=2)
         el_value = ttk.Label(data_module, text='---')
-        el_value.grid(row=4, column=4, sticky=EW, padx=5, pady=2)
+        el_value.grid(row=4, column=4, sticky="EW", padx=5, pady=2)
 
         """ ---------- CONTROL_MODULE ----------"""
 
         control_module = ttk.Frame(root)
-        control_module.grid(row=2, column=1, sticky=NSEW, padx=20, pady=10)
+        control_module.grid(row=2, column=1, sticky="NSEW", padx=20, pady=10)
         control_module.columnconfigure(0, weight=1)
         control_module.columnconfigure(1, weight=1)
         control_module.columnconfigure(2, weight=1)
         control_module.columnconfigure(3, weight=1)
         control_module.columnconfigure(4, weight=1)
 
-        real_time = ttk.Button(control_module, text='Tiempo real', bootstyle=DARK, padding=5)
-        real_time.grid(row=0, column=0, columnspan=3, sticky=NSEW, padx=5, pady=10)
+        real_time = ttk.Button(control_module, text='Tiempo real', bootstyle="DARK", padding=5)
+        real_time.grid(row=0, column=0, columnspan=3, sticky="NSEW", padx=5, pady=10)
 
-        prediction = ttk.Button(control_module, text='Predicción', bootstyle=DARK, padding=5)
-        prediction.grid(row=0, column=3, columnspan=3, sticky=NSEW, padx=5, pady=10)
+        prediction = ttk.Button(control_module, text='Predicción', bootstyle="DARK", padding=5)
+        prediction.grid(row=0, column=3, columnspan=3, sticky="NSEW", padx=5, pady=10)
 
         current_time = datetime.datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
 
-        prediction_date = ttk.Entry(control_module, bootstyle=DARK, textvariable=current_time)
-        prediction_date.grid(row=1, column=0, columnspan=2, sticky=NSEW, padx=5, pady=10)
+        prediction_date = ttk.Entry(control_module, bootstyle="DARK", textvariable=current_time)
+        prediction_date.grid(row=1, column=0, columnspan=2, sticky="NSEW", padx=5, pady=10)
 
         prediction_date.delete(0, tk.END)
         prediction_date.insert(0, current_time)
 
         time_var = ttk.StringVar()
         time_var.set(1)
-        time = ttk.Spinbox(control_module, bootstyle=DARK, from_=1, to=60, textvariable=time_var)
-        time.grid(row=1, column=2, columnspan=2, sticky=NSEW, padx=5, pady=10)
+        time = ttk.Spinbox(control_module, bootstyle="DARK", from_=1, to=60, textvariable=time_var)
+        time.grid(row=1, column=2, columnspan=2, sticky="NSEW", padx=5, pady=10)
 
-        measure = ttk.Combobox(control_module, bootstyle=DARK, values=['Segundos', 'Minutos', 'Horas'])
+        measure = ttk.Combobox(control_module, bootstyle="DARK", values=['Segundos', 'Minutos', 'Horas'])
         measure.current(0)
-        measure.grid(row=1, column=4, columnspan=2, sticky=NSEW, padx=5, pady=10)
+        measure.grid(row=1, column=4, columnspan=2, sticky="NSEW", padx=5, pady=10)
 
-        stepper = ttk.Button(control_module, text='\u23ed Paso a paso', bootstyle=DARK, padding=5)
-        stepper.grid(row=2, column=0, columnspan=3, sticky=NSEW, padx=5, pady=10)
+        stepper = ttk.Button(control_module, text='\u23ed Paso a paso', bootstyle="DARK", padding=5)
+        stepper.grid(row=2, column=0, columnspan=3, sticky="NSEW", padx=5, pady=10)
 
-        automatic = ttk.Button(control_module, text='\u23f5 Automático', bootstyle=DARK, padding=5, command=self.use_prediction)
-        automatic.grid(row=2, column=3, columnspan=3, sticky=NSEW, padx=5, pady=10)
+        automatic = ttk.Button(control_module, text='\u23f5 Automático', bootstyle="DARK", padding=5, command=self.use_prediction)
+        automatic.grid(row=2, column=3, columnspan=3, sticky="NSEW", padx=5, pady=10)
 
         """ ---------- MAP_MODULE ----------"""
 
         map_frame = ttk.Frame(root, width=400, height=200)
-        map_frame.grid(row=0, column=0, columnspan=2, sticky="nsew")
+        map_frame.grid(row=0, column=0, columnspan=2, sticky="NSEW")
         
         fig = plt.Figure(figsize=(15, 8))
         map_ax = fig.add_subplot(1, 1, 1)

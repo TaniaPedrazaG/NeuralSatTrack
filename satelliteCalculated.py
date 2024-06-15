@@ -11,7 +11,7 @@ def add_data(data, new_data):
 def observer_location():
     # geolocator = Nominatim(user_agent="MyApp")
     # loc = geolocator.geocode('Sogamoso')
-    return {-72.9267902771329, 5.714820540281473 }
+    return -72.9267902771329, 5.714820540281473
 
 def calc_distance_sat_et(r):
     x, y, z = r
@@ -39,6 +39,21 @@ def get_spherical_coordinates(selected_satellite):
     e, r, v = satellite.sgp4(jd, fr)
     return r, v
 
+def calc_azimut(lonSAT):
+    lonET, latET = observer_location()
+    A = math.atan(math.tan(math.radians(lonSAT - lonET)) / math.sin(math.radians(latET)))
+    if latET > 0:
+        if lonSAT < lonET:
+            az = 180 + math.degrees(A)
+        if lonSAT > lonET:
+            az = 180 - math.degrees(A)
+    if latET < 0:
+        if lonSAT < lonET:
+            az = 360 - math.degrees(A)
+        if lonSAT > lonET:
+            az = math.degrees(A)
+    return az
+
 def get_satellite_data(selected_satellite):
     G = 6.67430e-11
     M = 5.972e24 
@@ -48,9 +63,11 @@ def get_satellite_data(selected_satellite):
     line2 = selected_satellite['line_2']
     satellite = EarthSatellite(line1, line2, satellite_name, ts)
 
-    bluffton = wgs84.latlon(+5.7148, -72.9279)
-    t0 = ts.utc(2024, 6, 8)
-    t1 = ts.utc(2024, 6, 9)
+    lonET, latET = observer_location()
+
+    bluffton = wgs84.latlon(latET, lonET)
+    t0 = ts.utc(2024, 6, 15)
+    t1 = ts.utc(2024, 6, 16)
     t, events = satellite.find_events(bluffton, t0, t1, altitude_degrees=30.0)
     event_names = 'rise above 30°', 'culminate', 'set below 30°'
     for ti, event in zip(t, events):
@@ -80,10 +97,12 @@ def get_satellite_data(selected_satellite):
     r_total = calc_distance_sat_cent(distance)
     vel = math.sqrt(G * M / r_total)
 
+    azimut = calc_azimut(lon.degrees)
+
     new_data = {
         'longuitude': float(lon.degrees),
         'latitude': float(lat.degrees),
-        'azimut': float(az.degrees),
+        'azimut': float(azimut),
         'elevation': float(alt.degrees),
         'timestamp': t.utc_strftime('%Y-%m-%d %H:%M:%S'),
     }
@@ -92,7 +111,7 @@ def get_satellite_data(selected_satellite):
     current_data = read_json_data(file_name)
     add_data(current_data, new_data)
     write_json_data(file_name, current_data)
-    return lat.degrees, lon.degrees, distance, vel, alt.degrees, az.degrees
+    return lat.degrees, lon.degrees, distance, vel, alt.degrees, azimut
 
 def read_json_data(name_file):
     try:
