@@ -23,7 +23,7 @@ class Interface:
         iss_positions = []
         satelliteList = []
         global selected_satellite
-        rnn_instance = RNNPrediction()
+        self.rnn_instance = RNNPrediction()
 
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 

@@ -98,16 +98,14 @@ def get_satellite_data(selected_satellite):
     vel = math.sqrt(G * M / r_total)
 
     azimut = calc_azimut(lon.degrees)
-
+    
     new_data = {
-        'longuitude': float(lon.degrees),
+        'longitude': float(lon.degrees),
         'latitude': float(lat.degrees),
-        'azimut': float(azimut),
-        'elevation': float(alt.degrees),
         'timestamp': t.utc_strftime('%Y-%m-%d %H:%M:%S'),
     }
 
-    file_name = 'training/train_' + satellite_name + '.json'
+    file_name = 'training/training_' + satellite_name + '.json'
     current_data = read_json_data(file_name)
     add_data(current_data, new_data)
     write_json_data(file_name, current_data)
