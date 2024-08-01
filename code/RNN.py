@@ -1,78 +1,87 @@
 import numpy as np
 import pandas as pd
-from datetime import datetime, timedelta
 import matplotlib.pyplot as plt
-from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import LSTM, Dense
 from sklearn.preprocessing import MinMaxScaler
+from keras.models import Sequential
+from keras.layers import LSTM, Dense
+from keras.callbacks import ModelCheckpoint
 
 class RNNPrediction:
     def __init__(self):
         pass
 
     def predict_orbit(self, satellite_tle):
-        # Configuración inicial
-        num_predictions = 50
-
-        # Cargar datos del CSV
-        df = pd.read_csv('training/data.csv')
-        df['time'] = pd.to_datetime(df['time'])
-        df.set_index('time', inplace=True)
-
-        # Asegurarnos que las latitudes y longitudes estén en los rangos especificados
-        df['latitude'] = df['latitude'].clip(-90, 90)
-        df['longitude'] = df['longitude'].clip(-180, 180)
-
-        # Escalar los datos
+        data = pd.read_csv('historical/historical.csv')
+        # Normalizar los datos
         scaler = MinMaxScaler(feature_range=(0, 1))
-        scaled_data = scaler.fit_transform(df)
+        scaled_data = scaler.fit_transform(data[['latitude', 'longitude']])
 
-        # Preparar datos para la LSTM
-        def create_dataset(data, time_step=1):
-            X, y = [], []
-            for i in range(len(data) - time_step - 1):
-                X.append(data[i:(i + time_step), :])
-                y.append(data[i + time_step, :])
-            return np.array(X), np.array(y)
+        # Crear ventanas de tiempo para la RNN LSTM
+        def create_dataset(dataset, time_step=1):
+            dataX, dataY = [], []
+            for i in range(len(dataset) - time_step - 1):
+                a = dataset[i:(i + time_step), :]
+                dataX.append(a)
+                dataY.append(dataset[i + time_step, :])
+            return np.array(dataX), np.array(dataY)
 
-        time_step = 20
+        time_step = 5
         X, y = create_dataset(scaled_data, time_step)
 
-        # Crear el modelo LSTM
+        # Dividir los datos en conjuntos de entrenamiento y prueba
+        train_size = int(len(X) * 0.7)
+        test_size = len(X) - train_size
+        X_train, X_test = X[0:train_size], X[train_size:len(X)]
+        y_train, y_test = y[0:train_size], y[train_size:len(y)]
+
+        # 2. Definir y entrenar el modelo RNN LSTM
         model = Sequential()
         model.add(LSTM(50, return_sequences=True, input_shape=(time_step, 2)))
         model.add(LSTM(50, return_sequences=True))
         model.add(LSTM(50, return_sequences=False))
         model.add(Dense(2))
+
         model.compile(optimizer='adam', loss='mean_squared_error')
 
+        # Guardar el mejor modelo durante el entrenamiento
+        checkpoint = ModelCheckpoint('best_model.keras', monitor='val_loss', save_best_only=True, mode='min')
+
         # Entrenar el modelo
-        model.fit(X, y, epochs=100, batch_size=64, verbose=1)
+        history = model.fit(X_train, y_train, validation_data=(X_test, y_test), epochs=100, batch_size=64, verbose=1, callbacks=[checkpoint])
 
-        # Hacer predicciones
-        predictions = []
-        input_data = scaled_data[-time_step:].reshape(1, time_step, 2)
+        # 3. Predicción y validación
+        train_predict = model.predict(X_train)
+        test_predict = model.predict(X_test)
 
-        for _ in range(num_predictions):
-            predicted = model.predict(input_data)
-            predictions.append(predicted)
-            input_data = np.append(input_data[:, 1:, :], predicted.reshape(1, 1, 2), axis=1)
+        # Invertir la normalización
+        train_predict = scaler.inverse_transform(train_predict)
+        y_train = scaler.inverse_transform(y_train)
+        test_predict = scaler.inverse_transform(test_predict)
+        y_test = scaler.inverse_transform(y_test)
 
-        # Invertir la escala de las predicciones
-        predictions = scaler.inverse_transform(np.array(predictions).reshape(num_predictions, 2))
+        # Validar las predicciones
+        def validate_predictions(predictions):
+            validated = []
+            for pred in predictions:
+                if -90 <= pred[0] <= 90 and -180 <= pred[1] <= 180:
+                    validated.append(pred)
+            return np.array(validated)
 
-        # Convertir las predicciones a DataFrame
-        predictions_df = pd.DataFrame(predictions, columns=['latitude', 'longitude'])
-        predictions_df['latitude'] = predictions_df['latitude'].clip(-90, 90)
-        predictions_df['longitude'] = predictions_df['longitude'].clip(-180, 180)
+        validated_train_predict = validate_predictions(train_predict)
+        validated_test_predict = validate_predictions(test_predict)
 
-        # Crear una columna de tiempo para las predicciones
-        last_time = df.index[-1]
-        time_deltas = pd.to_timedelta(np.arange(1, num_predictions + 1), unit='s')
-        predictions_df['time'] = last_time + time_deltas
+        # 4. Plotting de los resultados
+        plt.figure(figsize=(14, 7))
 
-        # Guardar las predicciones en un archivo CSV
-        predictions_df.to_csv('iss_position_predictions.csv', index=False)
+        # Plotear los datos históricos
+        plt.plot(data['longitude'], data['latitude'], label='Historico', color='red', linestyle='--')
+        plt.plot(validated_train_predict[:, 1], validated_train_predict[:, 0], label='Entrenamiento', linestyle='dotted')
+        plt.plot(validated_test_predict[:, 1], validated_test_predict[:, 0], label='Prueba')
 
-        # Mostrar las predicciones
-        print(predictions_df)
+        plt.xlabel('Tiempo')
+        plt.ylabel('Posición')
+        plt.legend()
+        plt.show()
+
+        # 5. Exportación del modelo
+        model.save('30_seconds_historical_final_5.keras')
