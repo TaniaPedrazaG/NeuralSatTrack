@@ -1,6 +1,7 @@
+from datetime import datetime, timedelta
+import csv
 import json
 import math
-import datetime
 from sgp4.api import jday
 from sgp4.api import Satrec
 from skyfield.api import EarthSatellite, load, wgs84
@@ -27,7 +28,7 @@ def get_spherical_coordinates(selected_satellite):
     line2 = selected_satellite['line_2']
 
     satellite = Satrec.twoline2rv(line1, line2)
-    now = datetime.datetime.now()
+    now = datetime.now()
 
     year = now.year
     month = now.month
@@ -98,17 +99,6 @@ def get_satellite_data(selected_satellite):
     vel = math.sqrt(G * M / r_total)
 
     azimut = calc_azimut(lon.degrees)
-    
-    new_data = {
-        'longitude': float(lon.degrees),
-        'latitude': float(lat.degrees),
-        'timestamp': t.utc_strftime('%Y-%m-%d %H:%M:%S'),
-    }
-
-    file_name = 'training/training_' + satellite_name + '.json'
-    current_data = read_json_data(file_name)
-    add_data(current_data, new_data)
-    write_json_data(file_name, current_data)
     return lat.degrees, lon.degrees, distance, vel, alt.degrees, azimut
 
 def read_json_data(name_file):
@@ -117,9 +107,43 @@ def read_json_data(name_file):
             datos = json.load(archivo)
     except FileNotFoundError:
         datos = []
-
     return datos
 
 def write_json_data(name_file, data):
     with open(name_file, 'w') as archivo:
         json.dump(data, archivo, indent=3)
+
+def get_in_range(selected_satellite):
+    ts = load.timescale()
+    satellite_name = selected_satellite['satellite_name']
+    line1 = selected_satellite['line_1']
+    line2 = selected_satellite['line_2']
+    satellite = EarthSatellite(line1, line2, satellite_name, ts)
+    
+    output_file = 'data/historic/historic_data.csv'
+    
+    start_time = datetime(2024, 8, 1, 5, 0, 0)
+    end_time = datetime(2024, 8, 2, 5, 0, 0)
+    delta = timedelta(seconds=30)
+    
+    with open(output_file, mode='w', newline='') as file:
+        writer = csv.writer(file)
+        writer.writerow(['timestamp', 'latitude', 'longitude'])
+        
+        current_time = start_time
+        
+        while current_time <= end_time:
+            ts = load.timescale()
+            t = ts.utc(current_time.year, current_time.month, current_time.day,
+                    current_time.hour, current_time.minute, current_time.second)
+            
+            geocentric = satellite.at(t)
+            subpoint = geocentric.subpoint()
+            latitude = subpoint.latitude.degrees
+            longitude = subpoint.longitude.degrees
+
+            adjusted_time = current_time - timedelta(hours=5)
+            
+            writer.writerow([adjusted_time, latitude, longitude])
+            
+            current_time += delta

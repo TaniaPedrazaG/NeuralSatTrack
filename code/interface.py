@@ -8,7 +8,6 @@ from mpl_toolkits.basemap import Basemap
 from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-from RNN import RNNPrediction
 from satelliteCalculated import *
 
 class Interface:
@@ -23,7 +22,6 @@ class Interface:
         iss_positions = []
         satelliteList = []
         global selected_satellite
-        self.rnn_instance = RNNPrediction()
 
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
@@ -47,7 +45,7 @@ class Interface:
 
         checkbox_frame.bind("<Configure>", configure_scroll_region)
 
-        with open('data/intelsat.json') as f:
+        with open('data/satnogs.json') as f:
             data = json.load(f)
 
         for satellite in data:
@@ -102,7 +100,7 @@ class Interface:
         et_location = ttk.Label(info_module, text=(f"{et_city}, {abs(et_lat):.4f}° {'S' if et_lat < 0 else 'N'}, {abs(et_lon):.4f}° {'W' if et_lon < 0 else 'E'}"), font=('Helvetica', 10, 'bold'))
         et_location.pack(side="left")
 
-        local_time = ttk.Label(info_module, text=datetime.datetime.now().strftime("%Y-%m-%d  %H:%M:%S"), font=('Helvetica', 10, 'bold'))
+        local_time = ttk.Label(info_module, text=datetime.now().strftime("%Y-%m-%d  %H:%M:%S"), font=('Helvetica', 10, 'bold'))
         local_time.pack(side="right")
 
         """ ---------- DATA_MODULE ----------"""
@@ -162,7 +160,7 @@ class Interface:
         prediction = ttk.Button(control_module, text='Predicción', bootstyle="DARK", padding=5)
         prediction.grid(row=0, column=3, columnspan=3, sticky="NSEW", padx=5, pady=10)
 
-        current_time = datetime.datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
+        current_time = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
 
         prediction_date = ttk.Entry(control_module, bootstyle="DARK", textvariable=current_time)
         prediction_date.grid(row=1, column=0, columnspan=2, sticky="NSEW", padx=5, pady=10)
@@ -199,7 +197,7 @@ class Interface:
         world_map.fillcontinents(color='#729951',lake_color='#2c5598')
         world_map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
         world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
-        world_map.nightshade(datetime.datetime.now(timezone.utc))
+        world_map.nightshade(datetime.now(timezone.utc))
         
         self.canvas = FigureCanvasTkAgg(fig, master=map_frame)
         self.canvas.get_tk_widget().pack(side=tk.TOP, fill=tk.BOTH, expand=1)
@@ -218,7 +216,7 @@ class Interface:
             world_map.fillcontinents(color='#729951',lake_color='#2c5598')
             world_map.drawparallels(range(-90, 91, 30), textcolor='#373a3c', labels=[0, 1, 0, 0], linewidth=0.5, fontsize=6)
             world_map.drawmeridians(range(-180, 181, 30), textcolor='#373a3c', labels=[0, 0, 0, 1], linewidth=0.5, fontsize=6)
-            world_map.nightshade(datetime.datetime.now(timezone.utc))
+            world_map.nightshade(datetime.now(timezone.utc))
 
             sat_lat_value.config(text=(f"{abs(lat):.4f}° {'S' if lat < 0 else 'N'}"))
             sat_lon_value.config(text=(f"{abs(lon):.4f}° {'W' if lon < 0 else 'E'}"))
@@ -247,4 +245,4 @@ class Interface:
 
     def use_prediction(self):
         global selected_satellite
-        prediction = self.rnn_instance.predict_orbit(selected_satellite)
+        get_in_range(selected_satellite)
