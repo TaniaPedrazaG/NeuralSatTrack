@@ -13,7 +13,7 @@ root.wm_iconphoto(False, photo)
 interface.Interface(root)
 
 def verify_TLE_date():
-    path_TLE = 'data/intelsat.json'
+    path_TLE = 'data/satnogs.json'
     timestamp_creation = os.path.getmtime(path_TLE)
     creation_date = datetime.fromtimestamp(timestamp_creation)
     current_time = datetime.now()

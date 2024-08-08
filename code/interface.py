@@ -9,6 +9,7 @@ from matplotlib.animation import FuncAnimation
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 from satelliteCalculated import *
+from predict import *
 
 class Interface:
     def __init__(self, parent):
@@ -16,12 +17,13 @@ class Interface:
         root.title("NeuralSatTrack")
         root.attributes('-zoomed', True)
         root.columnconfigure(0, weight=1)
-        root.columnconfigure(1, weight=1)
         root.rowconfigure(0, weight=1)
         
-        iss_positions = []
+        satellite_positions = []
         satelliteList = []
+        global satellite_predictions
         global selected_satellite
+        satellite_predictions = []
 
         ttk.Style().configure("TCheckbutton", padding=10, font=('Helvetica', 10))
 
@@ -68,14 +70,17 @@ class Interface:
         selected_checkbox = tk.IntVar(root, position)
         selected_satellite = sorted_satelliteList[position]
 
+        get_in_range(selected_satellite)
+
         def clear_trajectory():
-            iss_positions.clear()
+            satellite_positions.clear()
 
         def handle_checkbox():
             global selected_satellite
             index = selected_checkbox.get()
             satellite = sorted_satelliteList[index]
             selected_satellite = satellite
+            get_in_range(satellite)
             clear_trajectory()
 
         for index, data in enumerate(sorted_satelliteList):
@@ -148,40 +153,20 @@ class Interface:
 
         control_module = ttk.Frame(root)
         control_module.grid(row=2, column=1, sticky="NSEW", padx=20, pady=10)
-        control_module.columnconfigure(0, weight=1)
-        control_module.columnconfigure(1, weight=1)
-        control_module.columnconfigure(2, weight=1)
-        control_module.columnconfigure(3, weight=1)
-        control_module.columnconfigure(4, weight=1)
 
         real_time = ttk.Button(control_module, text='Tiempo real', bootstyle="DARK", padding=5)
-        real_time.grid(row=0, column=0, columnspan=3, sticky="NSEW", padx=5, pady=10)
+        real_time.grid(row=0, column=0, sticky="NSEW", padx=5, pady=10)
 
-        prediction = ttk.Button(control_module, text='Predicción', bootstyle="DARK", padding=5)
-        prediction.grid(row=0, column=3, columnspan=3, sticky="NSEW", padx=5, pady=10)
-
-        current_time = datetime.now().strftime("%Y-%m-%d  %H:%M:%S")
+        current_time = datetime.now().strftime("%Y-%m-%d")
 
         prediction_date = ttk.Entry(control_module, bootstyle="DARK", textvariable=current_time)
-        prediction_date.grid(row=1, column=0, columnspan=2, sticky="NSEW", padx=5, pady=10)
+        prediction_date.grid(row=1, column=0, sticky="NSEW", padx=5, pady=10)
 
         prediction_date.delete(0, tk.END)
         prediction_date.insert(0, current_time)
 
-        time_var = ttk.StringVar()
-        time_var.set(1)
-        time = ttk.Spinbox(control_module, bootstyle="DARK", from_=1, to=60, textvariable=time_var)
-        time.grid(row=1, column=2, columnspan=2, sticky="NSEW", padx=5, pady=10)
-
-        measure = ttk.Combobox(control_module, bootstyle="DARK", values=['Segundos', 'Minutos', 'Horas'])
-        measure.current(0)
-        measure.grid(row=1, column=4, columnspan=2, sticky="NSEW", padx=5, pady=10)
-
-        stepper = ttk.Button(control_module, text='\u23ed Paso a paso', bootstyle="DARK", padding=5)
-        stepper.grid(row=2, column=0, columnspan=3, sticky="NSEW", padx=5, pady=10)
-
-        automatic = ttk.Button(control_module, text='\u23f5 Automático', bootstyle="DARK", padding=5, command=self.use_prediction)
-        automatic.grid(row=2, column=3, columnspan=3, sticky="NSEW", padx=5, pady=10)
+        prediction = ttk.Button(control_module, text='Predicción', bootstyle="DARK", padding=5, command=self.predict_orbit)
+        prediction.grid(row=2, column=0, sticky="NSEW", padx=5, pady=10)
 
         """ ---------- MAP_MODULE ----------"""
 
@@ -224,15 +209,24 @@ class Interface:
             vel_value.config(text=(f"{vel:.0f}"))
             az_value.config(text=(f"{az:.2f}°"))
             el_value.config(text=(f"{elv:.2f}°"))
-            iss_positions.append((lat, lon))
+            local_time.config(text=datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+            satellite_positions.append((lat, lon))
 
-            if len(iss_positions) > 1:
-                lats, lons = zip(*iss_positions)
+            if len(satellite_positions) > 1:
+                lats, lons = zip(*satellite_positions)
                 x, y = world_map(list(lons), list(lats))
                 for i in range(len(x)-1):
                     if crosses_antimeridian(lons[i], lons[i+1]):
                         continue
                     world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'w-', linewidth=0.5)
+
+            if len(satellite_predictions) > 1:
+                lons, lats = zip(*satellite_predictions)
+                x, y = world_map(list(lons), list(lats))
+                for i in range(len(x)-1):
+                    if crosses_antimeridian(lons[i], lons[i+1]):
+                        continue
+                    world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'y-', linewidth=0.5)
 
             x, y = world_map(lon, lat)
             world_map.plot(x, y, 'wo', markersize=5)
@@ -244,5 +238,13 @@ class Interface:
         self.ani = FuncAnimation(fig, update, frames=range(100), init_func=init, blit=False, interval=1000)
 
     def use_prediction(self):
+        return
+
+    def predict_orbit(self):
         global selected_satellite
-        get_in_range(selected_satellite)
+        global satellite_predictions
+        if len(satellite_predictions) > 0:
+            satellite_predictions.clear()
+        else:
+            positions = predict_values(selected_satellite)
+            satellite_predictions = positions

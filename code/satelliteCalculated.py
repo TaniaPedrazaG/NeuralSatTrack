@@ -86,9 +86,6 @@ def get_satellite_data(selected_satellite):
 
     alt, az, distance = topocentric.altaz()
 
-    if alt.degrees > 0:
-        print('The ISS is above the horizon')
-
     ra, dec, distance = topocentric.radec(epoch='date')
 
     r, v = get_spherical_coordinates(selected_satellite)
@@ -120,10 +117,10 @@ def get_in_range(selected_satellite):
     line2 = selected_satellite['line_2']
     satellite = EarthSatellite(line1, line2, satellite_name, ts)
     
-    output_file = 'data/historic/historic_data.csv'
+    output_file = 'data/historic/' + satellite_name + '.csv'
     
-    start_time = datetime(2024, 8, 1, 5, 0, 0)
-    end_time = datetime(2024, 8, 2, 5, 0, 0)
+    start_time = datetime(2024, 8, 7, 5, 0, 0)
+    end_time = datetime(2024, 8, 8, 5, 0, 0)
     delta = timedelta(seconds=30)
     
     with open(output_file, mode='w', newline='') as file:
