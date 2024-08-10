@@ -1,77 +1,69 @@
-import joblib
 import numpy as np
 import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import load_model
+from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
 
 def predict_values(selected_satellite):
-    def custom_loss(y_true, y_pred):
-        sin_lat_loss = tf.reduce_mean(tf.square(y_true[:, 0] - y_pred[:, 0]))
-        cos_lat_loss = tf.reduce_mean(tf.square(y_true[:, 1] - y_pred[:, 1]))
-        sin_lon_loss = tf.reduce_mean(tf.square(y_true[:, 2] - y_pred[:, 2]))
-        cos_lon_loss = tf.reduce_mean(tf.square(y_true[:, 3] - y_pred[:, 3]))
-        return sin_lat_loss + cos_lat_loss + sin_lon_loss + cos_lon_loss
     
     sat_name = selected_satellite['satellite_name']
-
-    model = load_model('model/RNN_GRU_model.keras', custom_objects={'custom_loss': custom_loss})
-    scaler_sin_lat = joblib.load('model/scaler_sin_lat.pkl')
-    scaler_cos_lat = joblib.load('model/scaler_cos_lat.pkl')
-    scaler_sin_lon = joblib.load('model/scaler_sin_lon.pkl')
-    scaler_cos_lon = joblib.load('model/scaler_cos_lon.pkl')
-
-    df_new = pd.read_csv('data/historic/' + sat_name + '.csv')
-    df_new['timestamp'] = pd.to_datetime(df_new['timestamp'])
-    df_new.set_index('timestamp', inplace=True)
-
-    df_new['sin_latitude'] = np.sin(np.radians(df_new['latitude']))
-    df_new['cos_latitude'] = np.cos(np.radians(df_new['latitude']))
-    df_new['sin_longitude'] = np.sin(np.radians(df_new['longitude']))
-    df_new['cos_longitude'] = np.cos(np.radians(df_new['longitude']))
-
-    df_new['sin_latitude'] = scaler_sin_lat.transform(df_new[['sin_latitude']])
-    df_new['cos_latitude'] = scaler_cos_lat.transform(df_new[['cos_latitude']])
-    df_new['sin_longitude'] = scaler_sin_lon.transform(df_new[['sin_longitude']])
-    df_new['cos_longitude'] = scaler_cos_lon.transform(df_new[['cos_longitude']])
-
+    
     def create_sequences(data, seq_length):
-        xs = []
+        sequences = []
         for i in range(len(data) - seq_length):
-            x = data.iloc[i:(i + seq_length)][['sin_latitude', 'cos_latitude', 'sin_longitude', 'cos_longitude']].values
-            xs.append(x)
-        return np.array(xs)
+            sequences.append(data[i:i + seq_length])
+        return np.array(sequences)
+    
+    model_lat = load_model('model/model_lat.keras')
+    model_sin = load_model('model/model_sin.keras')
+    model_cos = load_model('model/model_cos.keras')
+    
+    new_data = pd.read_csv('data/historic/' + sat_name +'.csv')
+    
+    new_data['timestamp'] = pd.to_datetime(new_data['timestamp'])
+    
+    latitudes = new_data['latitude'].values
+    longitudes = new_data['longitude'].values
+    
+    scaler_lat = MinMaxScaler(feature_range=(-1, 1))
+    latitudes_scaled = scaler_lat.fit_transform(latitudes.reshape(-1, 1))
+    
+    longitudes_rad = np.deg2rad(longitudes)
+    longitudes_sin = np.sin(longitudes_rad)
+    longitudes_cos = np.cos(longitudes_rad)
+    
+    scaler_lon_sin = MinMaxScaler(feature_range=(-1, 1))
+    scaler_lon_cos = MinMaxScaler(feature_range=(-1, 1))
 
-    SEQ_LENGTH = 80
-    X_new = create_sequences(df_new, SEQ_LENGTH)
+    longitudes_sin_scaled = scaler_lon_sin.fit_transform(longitudes_sin.reshape(-1, 1))
+    longitudes_cos_scaled = scaler_lon_cos.fit_transform(longitudes_cos.reshape(-1, 1))
+    
+    SEQ_LENGTH = 50
 
-    predictions = model.predict(X_new)
+    lat_sequences = create_sequences(latitudes_scaled, SEQ_LENGTH)
+    sin_sequences = create_sequences(longitudes_sin_scaled, SEQ_LENGTH)
+    cos_sequences = create_sequences(longitudes_cos_scaled, SEQ_LENGTH)
+    
+    lat_predictions_scaled = model_lat.predict(lat_sequences)
+    sin_predictions_scaled = model_sin.predict(sin_sequences)
+    cos_predictions_scaled = model_cos.predict(cos_sequences)
+    
+    lat_predictions = scaler_lat.inverse_transform(lat_predictions_scaled)
+    sin_predictions = scaler_lon_sin.inverse_transform(sin_predictions_scaled)
+    cos_predictions = scaler_lon_cos.inverse_transform(cos_predictions_scaled)
+    
+    longitudes_predictions_rad = np.arctan2(sin_predictions, cos_predictions)
+    longitudes_predictions = np.rad2deg(longitudes_predictions_rad)
 
-    pred_sin_lat = scaler_sin_lat.inverse_transform(predictions[:, 0].reshape(-1, 1))
-    pred_cos_lat = scaler_cos_lat.inverse_transform(predictions[:, 1].reshape(-1, 1))
-    pred_sin_lon = scaler_sin_lon.inverse_transform(predictions[:, 2].reshape(-1, 1))
-    pred_cos_lon = scaler_cos_lon.inverse_transform(predictions[:, 3].reshape(-1, 1))
-
-    pred_lat = np.degrees(np.arctan2(pred_sin_lat, pred_cos_lat))
-    pred_lon = np.degrees(np.arctan2(pred_sin_lon, pred_cos_lon))
-
-    pred_lat = np.clip(pred_lat, -90, 90)
-    pred_lon = np.clip(pred_lon, -180, 180)
-
-    predictions_df = pd.DataFrame({
-        'timestamp': df_new.index[SEQ_LENGTH:],
-        'predicted_latitude': pred_lat.flatten(),
-        'predicted_longitude': pred_lon.flatten()
+    results_df = pd.DataFrame({
+        'timestamp': new_data['timestamp'][SEQ_LENGTH:].values,
+        'latitude_predicted': lat_predictions.flatten(),
+        'longitude_predicted': longitudes_predictions.flatten()
     })
-
-    df_hist = df_new[['latitude', 'longitude']].iloc[SEQ_LENGTH:]
-    predictions_df['actual_latitude'] = df_hist['latitude'].values
-    predictions_df['actual_longitude'] = df_hist['longitude'].values
-
-    predictions_df.to_csv('data/predictions/predictions_data.csv', index=False)
-
+    
     predicted_values = []
-
-    for index, row in predictions_df.iterrows():
-        predicted_values.append((row['predicted_longitude'], row['predicted_latitude']))
+    for index, row in results_df.iterrows():
+        predicted_values.append([row['longitude_predicted'], row['latitude_predicted']])
 
     return predicted_values

@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 import csv
 import json
 import math
+import os
 from sgp4.api import jday
 from sgp4.api import Satrec
 from skyfield.api import EarthSatellite, load, wgs84
@@ -110,7 +111,17 @@ def write_json_data(name_file, data):
     with open(name_file, 'w') as archivo:
         json.dump(data, archivo, indent=3)
 
+def verify_update(selected_satellite):
+    sat_name = selected_satellite['satellite_name']
+    path_TLE = 'data/historic/' + sat_name +'.csv'
+    timestamp_creation = os.path.getmtime(path_TLE)
+    creation_date = datetime.fromtimestamp(timestamp_creation)
+    current_time = datetime.now()
+    return creation_date.date() == current_time.date()
+
 def get_in_range(selected_satellite):
+    if verify_update(selected_satellite):
+        return
     ts = load.timescale()
     satellite_name = selected_satellite['satellite_name']
     line1 = selected_satellite['line_1']
@@ -119,8 +130,8 @@ def get_in_range(selected_satellite):
     
     output_file = 'data/historic/' + satellite_name + '.csv'
     
-    start_time = datetime(2024, 8, 7, 5, 0, 0)
-    end_time = datetime(2024, 8, 8, 5, 0, 0)
+    start_time = datetime(2024, 8, 8, 5, 0, 0)
+    end_time = datetime(2024, 8, 9, 5, 0, 0)
     delta = timedelta(seconds=30)
     
     with open(output_file, mode='w', newline='') as file:

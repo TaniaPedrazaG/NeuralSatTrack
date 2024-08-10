@@ -2,8 +2,8 @@ import os
 import re
 import json
 import requests
-import ttkbootstrap as ttk
 from datetime import datetime
+import ttkbootstrap as ttk
 from ttkbootstrap.constants import *
 
 tle_urls = [
