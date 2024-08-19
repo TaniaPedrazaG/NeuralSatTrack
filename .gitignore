@@ -164,7 +164,7 @@ cython_debug/
 training/
 data/
 uptcenv/
-model/
+/model/
 predictions/
 
 *.csv
