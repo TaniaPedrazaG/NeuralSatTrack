@@ -100,7 +100,7 @@ class Interface:
         info_module.grid(row=1, column=0, columnspan=2, sticky="NSEW", padx=20, pady=10)
 
         et_lon, et_lat = observer_location()
-        et_city = 'Bogotá'
+        et_city = 'UPTC-GS'
 
         et_location = ttk.Label(info_module, text=(f"{et_city}, {abs(et_lat):.4f}° {'S' if et_lat < 0 else 'N'}, {abs(et_lon):.4f}° {'W' if et_lon < 0 else 'E'}"), font=('Helvetica', 10, 'bold'))
         et_location.pack(side="left")
@@ -154,7 +154,7 @@ class Interface:
         control_module = ttk.Frame(root)
         control_module.grid(row=2, column=1, sticky="NSEW", padx=20, pady=10)
 
-        real_time = ttk.Button(control_module, text='Tiempo real', bootstyle="DARK", padding=5)
+        real_time = ttk.Button(control_module, text='Tiempo real', bootstyle="DARK", padding=5, command=self.clean_prediction)
         real_time.grid(row=0, column=0, sticky="NSEW", padx=5, pady=10)
 
         current_time = datetime.now().strftime("%Y-%m-%d")
@@ -226,7 +226,7 @@ class Interface:
                 for i in range(len(x)-1):
                     if crosses_antimeridian(lons[i], lons[i+1]):
                         continue
-                    world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'y-', linewidth=0.5)
+                    world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'y-', linewidth=1)
 
             x, y = world_map(lon, lat)
             world_map.plot(x, y, 'wo', markersize=5)
@@ -239,12 +239,14 @@ class Interface:
 
     def use_prediction(self):
         return
+    
+    def clean_prediction(self):
+        global satellite_predictions
+        if len(satellite_predictions) > 0:
+            satellite_predictions.clear()
 
     def predict_orbit(self):
         global selected_satellite
         global satellite_predictions
-        if len(satellite_predictions) > 0:
-            satellite_predictions.clear()
-        else:
-            positions = predict_values(selected_satellite)
-            satellite_predictions = positions
+        positions = predict_values(selected_satellite)
+        satellite_predictions = positions

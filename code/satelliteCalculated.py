@@ -13,7 +13,7 @@ def add_data(data, new_data):
 def observer_location():
     # geolocator = Nominatim(user_agent="MyApp")
     # loc = geolocator.geocode('Sogamoso')
-    return -72.9267902771329, 5.714820540281473
+    return -72.94039833237998, 5.704908307157419
 
 def calc_distance_sat_et(r):
     x, y, z = r
