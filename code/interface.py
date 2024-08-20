@@ -17,6 +17,7 @@ class Interface:
         root.title("NeuralSatTrack")
         root.attributes('-zoomed', True)
         root.columnconfigure(0, weight=1)
+        root.columnconfigure(1, weight=1)
         root.rowconfigure(0, weight=1)
         
         satellite_positions = []
@@ -30,7 +31,7 @@ class Interface:
         """ ---------- LIST_MODULE ----------"""
 
         checkbox_frame = ttk.Frame(root, width=100, height=400, padding=[0, 10, 0, 10])
-        checkbox_frame.grid(row=0, column=2, rowspan=3, sticky="NSEW")
+        checkbox_frame.grid(row=0, column=2, rowspan=2, sticky="NSEW")
 
         scrollbar = ttk.Scrollbar(checkbox_frame, orient="vertical", bootstyle="DARK, round")
         scrollbar.pack(side="right", fill="y")
@@ -117,7 +118,7 @@ class Interface:
         sat_name.grid(row=0, column=0, sticky="EW", pady=2)
 
         separator = ttk.Separator(data_module, bootstyle="DARK")
-        separator.grid(row=1, column=0, columnspan=2, sticky="NSEW", pady=5)
+        separator.grid(row=1, column=0, columnspan=5, sticky="NSEW", pady=5)
 
         sat_lon = ttk.Label(data_module, text='Longuitud:', font=('Helvetica', 11, 'bold'))
         sat_lon.grid(row=2, column=0, sticky="W", pady=2)
@@ -149,10 +150,32 @@ class Interface:
         el_value = ttk.Label(data_module, text='---')
         el_value.grid(row=4, column=4, sticky="EW", padx=5, pady=2)
 
+        """ ---------- PREDICTIONS_MODULE ----------"""
+
+        predictions_module = ttk.Frame(root)
+        predictions_module.grid(row=2, column=1, sticky="NSEW", padx=20, pady=10)
+        
+        columns = ("Fecha y Hora", "Longitud", "Latitud", "Azimut", "Elevación")
+        tree = tk.ttk.Treeview(predictions_module, columns=columns, show='headings', bootstyle="DARK")
+        
+        for col in columns:
+            tree.heading(col, text=col)
+            tree.column(col, anchor='center', width=150, stretch=True)
+
+        vsb = ttk.Scrollbar(predictions_module, orient="vertical", command=tree.yview, bootstyle="DARK, round")
+
+        tree.configure(yscrollcommand=vsb.set)
+
+        # Empacar el Treeview y las barras de desplazamiento
+        tree.pack(side=tk.LEFT, fill='both', expand=True)
+        vsb.pack(side=tk.RIGHT, fill='y')
+
+        predictions_module.bind("<Configure>", configure_scroll_region)
+
         """ ---------- CONTROL_MODULE ----------"""
 
         control_module = ttk.Frame(root)
-        control_module.grid(row=2, column=1, sticky="NSEW", padx=20, pady=10)
+        control_module.grid(row=2, column=2, sticky="NSEW", padx=20, pady=10)
 
         real_time = ttk.Button(control_module, text='Tiempo real', bootstyle="DARK", padding=5, command=self.clean_prediction)
         real_time.grid(row=0, column=0, sticky="NSEW", padx=5, pady=10)
@@ -221,12 +244,15 @@ class Interface:
                     world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'w-', linewidth=0.5)
 
             if len(satellite_predictions) > 1:
-                lons, lats = zip(*satellite_predictions)
+                time, lons, lats, azi = zip(*satellite_predictions)
                 x, y = world_map(list(lons), list(lats))
                 for i in range(len(x)-1):
                     if crosses_antimeridian(lons[i], lons[i+1]):
                         continue
                     world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'y-', linewidth=1)
+
+                for row in satellite_predictions:
+                    tree.insert("", tk.END, values=row)
 
             x, y = world_map(lon, lat)
             world_map.plot(x, y, 'wo', markersize=5)

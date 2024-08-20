@@ -3,7 +3,8 @@ import pandas as pd
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 from sklearn.preprocessing import MinMaxScaler
-import matplotlib.pyplot as plt
+
+from satelliteCalculated import *
 
 def predict_values(selected_satellite):
     
@@ -64,6 +65,7 @@ def predict_values(selected_satellite):
     
     predicted_values = []
     for index, row in results_df.iterrows():
-        predicted_values.append([row['longitude_predicted'], row['latitude_predicted']])
+        azimut = calc_azimut(row['longitude_predicted'])
+        predicted_values.append([row['timestamp'], row['longitude_predicted'], row['latitude_predicted'], azimut])
 
     return predicted_values
