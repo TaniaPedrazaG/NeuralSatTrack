@@ -20,8 +20,10 @@ class Interface:
         root.columnconfigure(1, weight=1)
         root.rowconfigure(0, weight=1)
         
+        checkbuttons = []
         satellite_positions = []
         satelliteList = []
+        sorted_satelliteList = []
         global satellite_predictions
         global selected_satellite
         satellite_predictions = []
@@ -32,6 +34,13 @@ class Interface:
 
         checkbox_frame = ttk.Frame(root, width=100, height=400, padding=[0, 10, 0, 10])
         checkbox_frame.grid(row=0, column=2, rowspan=2, sticky="NSEW")
+
+        list_options = ttk.Combobox(checkbox_frame, bootstyle="DARK", values=['education', 'engineering', 'intelsat', 'satnogs', 'weather'])
+        list_options.current(3)
+        list_options.pack(side="top", fill="x", padx=10)
+
+        list_separator = ttk.Separator(checkbox_frame, bootstyle="DARK")
+        list_separator.pack(fill="x", pady=10)
 
         scrollbar = ttk.Scrollbar(checkbox_frame, orient="vertical", bootstyle="DARK, round")
         scrollbar.pack(side="right", fill="y")
@@ -48,52 +57,69 @@ class Interface:
 
         checkbox_frame.bind("<Configure>", configure_scroll_region)
 
-        with open('data/satnogs.json') as f:
-            data = json.load(f)
-
-        for satellite in data:
-            satelliteList.append({
-                "satellite_name": satellite["satellite_name"],
-                "line_1": satellite["tle_1"],
-                "line_2": satellite["tle_2"]
-            })
-
-        satelliteList_cleaned = [dict(t) for t in {tuple(d.items()) for d in satelliteList}]
-        sorted_satelliteList = sorted(satelliteList_cleaned, key=lambda x: x['satellite_name'])
-
-        for i, element in enumerate(sorted_satelliteList):
-            if element['satellite_name'] == 'ISS (ZARYA)':
-                position = i
-                break
-            else:
-                position = 0
-
-        selected_checkbox = tk.IntVar(root, position)
-        selected_satellite = sorted_satelliteList[position]
-
-        get_in_range(selected_satellite)
-
-        def clear_trajectory():
-            satellite_positions.clear()
-
-        def handle_checkbox():
+        def load_data(file_name):
             global selected_satellite
-            index = selected_checkbox.get()
-            satellite = sorted_satelliteList[index]
-            selected_satellite = satellite
-            get_in_range(satellite)
-            clear_trajectory()
 
-        for index, data in enumerate(sorted_satelliteList):
-            checkbox = ttk.Checkbutton(
-                checkbox_frame,
-                text=data["satellite_name"],
-                variable=selected_checkbox,
-                onvalue=index,
-                command=handle_checkbox,
-                bootstyle="DARK"
-            )
-            checkbox.grid(row=index, column=0, sticky="w")
+            for cb in checkbuttons:
+                cb.destroy()
+            satellite_positions.clear()
+            satelliteList.clear()
+            checkbuttons.clear()
+
+            with open('data/' + file_name + '.json') as f:
+                data = json.load(f)
+
+            for satellite in data:
+                satelliteList.append({
+                    "satellite_name": satellite["satellite_name"],
+                    "line_1": satellite["tle_1"],
+                    "line_2": satellite["tle_2"]
+                })
+
+            satelliteList_cleaned = [dict(t) for t in {tuple(d.items()) for d in satelliteList}]
+            sorted_satelliteList = sorted(satelliteList_cleaned, key=lambda x: x['satellite_name'])
+
+            for i, element in enumerate(sorted_satelliteList):
+                if element['satellite_name'] == 'ISS (ZARYA)':
+                    position = i
+                    break
+                else:
+                    position = 0
+
+            selected_checkbox = tk.IntVar(root, position)
+            selected_satellite = sorted_satelliteList[position]
+
+            def clear_trajectory():
+                satellite_positions.clear()
+
+            def handle_checkbox():
+                global selected_satellite
+                index = selected_checkbox.get()
+                satellite = sorted_satelliteList[index]
+                selected_satellite = satellite
+                get_in_range(satellite)
+                clear_trajectory()
+
+            get_in_range(selected_satellite)
+
+            for index, data in enumerate(sorted_satelliteList):
+                checkbox = ttk.Checkbutton(
+                    checkbox_frame,
+                    text=data["satellite_name"],
+                    variable=selected_checkbox,
+                    onvalue=index,
+                    command=handle_checkbox,
+                    bootstyle="DARK"
+                )
+                checkbox.grid(row=index, column=0, sticky="w")
+                checkbuttons.append(checkbox)
+
+        def bind_select(e):
+            load_data(list_options.get())
+
+        list_options.bind("<<ComboboxSelected>>", bind_select)
+
+        load_data('satnogs')
             
         """ ---------- INFO_MODULE ----------"""
 

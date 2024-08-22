@@ -114,10 +114,13 @@ def write_json_data(name_file, data):
 def verify_update(selected_satellite):
     sat_name = selected_satellite['satellite_name']
     path_TLE = 'data/historic/' + sat_name +'.csv'
-    timestamp_creation = os.path.getmtime(path_TLE)
-    creation_date = datetime.fromtimestamp(timestamp_creation)
-    current_time = datetime.now()
-    return creation_date.date() == current_time.date()
+    if os.path.exists(path_TLE):
+        timestamp_creation = os.path.getmtime(path_TLE)
+        creation_date = datetime.fromtimestamp(timestamp_creation)
+        current_time = datetime.now()
+        return creation_date.date() == current_time.date()
+    else:
+        print('El archivo csv no existe')
 
 def get_in_range(selected_satellite):
     if verify_update(selected_satellite):
