@@ -23,7 +23,6 @@ class Interface:
         checkbuttons = []
         satellite_positions = []
         satelliteList = []
-        sorted_satelliteList = []
         global satellite_predictions
         global selected_satellite
         satellite_predictions = []
@@ -204,18 +203,19 @@ class Interface:
         control_module.grid(row=2, column=2, sticky="NSEW", padx=20, pady=10)
 
         real_time = ttk.Button(control_module, text='Tiempo real', bootstyle="DARK", padding=5, command=self.clean_prediction)
-        real_time.grid(row=0, column=0, sticky="NSEW", padx=5, pady=10)
+        real_time.pack(fill='x', padx=10, pady= 15)
+        # real_time.grid(row=0, column=0, sticky="EW", padx=5, pady=10)
 
         current_time = datetime.now().strftime("%Y-%m-%d")
 
         prediction_date = ttk.Entry(control_module, bootstyle="DARK", textvariable=current_time)
-        prediction_date.grid(row=1, column=0, sticky="NSEW", padx=5, pady=10)
+        prediction_date.pack(fill='x', padx=10, pady= 15)
 
         prediction_date.delete(0, tk.END)
         prediction_date.insert(0, current_time)
 
         prediction = ttk.Button(control_module, text='Predicción', bootstyle="DARK", padding=5, command=self.predict_orbit)
-        prediction.grid(row=2, column=0, sticky="NSEW", padx=5, pady=10)
+        prediction.pack(fill='x', padx=10, pady= 15)
 
         """ ---------- MAP_MODULE ----------"""
 
