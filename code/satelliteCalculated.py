@@ -111,20 +111,31 @@ def write_json_data(name_file, data):
     with open(name_file, 'w') as archivo:
         json.dump(data, archivo, indent=3)
 
-def verify_update(selected_satellite):
+def verify_update(selected_satellite, predict_date):
     sat_name = selected_satellite['satellite_name']
     path_TLE = 'data/historic/' + sat_name +'.csv'
-    if os.path.exists(path_TLE):
-        timestamp_creation = os.path.getmtime(path_TLE)
-        creation_date = datetime.fromtimestamp(timestamp_creation)
-        current_time = datetime.now()
-        return creation_date.date() == current_time.date()
-    else:
-        print('El archivo csv no existe')
-
-def get_in_range(selected_satellite):
-    if verify_update(selected_satellite):
+    if not os.path.exists(path_TLE):
         return
+    timestamp_creation = os.path.getmtime(path_TLE)
+    creation_date = datetime.fromtimestamp(timestamp_creation)
+    return creation_date.date() == predict_date
+
+def get_in_range(selected_satellite, predict_date):
+    if verify_update(selected_satellite, predict_date):
+        return
+    
+    formatted_date = datetime.strptime(predict_date, "%d/%m/%y")
+
+    day = formatted_date.day
+    month = formatted_date.month
+    year = formatted_date.year
+
+    if year < 100:
+        year += 2000
+    
+    date_next_day = formatted_date + timedelta(days=1)
+    next_day = date_next_day.day
+
     ts = load.timescale()
     satellite_name = selected_satellite['satellite_name']
     line1 = selected_satellite['line_1']
@@ -133,8 +144,8 @@ def get_in_range(selected_satellite):
     
     output_file = 'data/historic/' + satellite_name + '.csv'
     
-    start_time = datetime(2024, 8, 8, 5, 0, 0)
-    end_time = datetime(2024, 8, 9, 5, 0, 0)
+    start_time = datetime(year, month, day, 5, 0, 0)
+    end_time = datetime(year, month, next_day, 5, 0, 0)
     delta = timedelta(seconds=30)
     
     with open(output_file, mode='w', newline='') as file:

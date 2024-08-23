@@ -96,10 +96,7 @@ class Interface:
                 index = selected_checkbox.get()
                 satellite = sorted_satelliteList[index]
                 selected_satellite = satellite
-                get_in_range(satellite)
                 clear_trajectory()
-
-            get_in_range(selected_satellite)
 
             for index, data in enumerate(sorted_satelliteList):
                 checkbox = ttk.Checkbutton(
@@ -190,8 +187,7 @@ class Interface:
         vsb = ttk.Scrollbar(predictions_module, orient="vertical", command=tree.yview, bootstyle="DARK, round")
 
         tree.configure(yscrollcommand=vsb.set)
-
-        # Empacar el Treeview y las barras de desplazamiento
+        
         tree.pack(side=tk.LEFT, fill='both', expand=True)
         vsb.pack(side=tk.RIGHT, fill='y')
 
@@ -204,17 +200,18 @@ class Interface:
 
         real_time = ttk.Button(control_module, text='Tiempo real', bootstyle="DARK", padding=5, command=self.clean_prediction)
         real_time.pack(fill='x', padx=10, pady= 15)
-        # real_time.grid(row=0, column=0, sticky="EW", padx=5, pady=10)
 
-        current_time = datetime.now().strftime("%Y-%m-%d")
-
-        prediction_date = ttk.Entry(control_module, bootstyle="DARK", textvariable=current_time)
+        prediction_date = ttk.DateEntry(control_module, bootstyle="DARK", dateformat='%x')
         prediction_date.pack(fill='x', padx=10, pady= 15)
 
-        prediction_date.delete(0, tk.END)
-        prediction_date.insert(0, current_time)
+        def predict_orbit():
+            global selected_satellite
+            global satellite_predictions
+            get_in_range(selected_satellite, prediction_date.entry.get())
+            positions = predict_values(selected_satellite)
+            satellite_predictions = positions
 
-        prediction = ttk.Button(control_module, text='Predicción', bootstyle="DARK", padding=5, command=self.predict_orbit)
+        prediction = ttk.Button(control_module, text='Predicción', bootstyle="DARK", padding=5, command=predict_orbit)
         prediction.pack(fill='x', padx=10, pady= 15)
 
         """ ---------- MAP_MODULE ----------"""
@@ -296,9 +293,3 @@ class Interface:
         global satellite_predictions
         if len(satellite_predictions) > 0:
             satellite_predictions.clear()
-
-    def predict_orbit(self):
-        global selected_satellite
-        global satellite_predictions
-        positions = predict_values(selected_satellite)
-        satellite_predictions = positions
