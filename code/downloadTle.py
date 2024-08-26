@@ -67,7 +67,6 @@ class DownloadTLE:
                 status_label.config(text=current_text + "\n" + message)
             else:
                 status_label.config(text=message)
-            # Apply style based on the `style` argument
             if style == 'success':
                 status_label.config(bootstyle=SUCCESS)
             elif style == 'danger':
