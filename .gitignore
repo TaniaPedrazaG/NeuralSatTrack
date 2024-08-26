@@ -162,9 +162,7 @@ cython_debug/
 #.idea/
 
 training/
-data/
 uptcenv/
-/model/
 predictions/
 
 *.csv
