@@ -65,7 +65,9 @@ def predict_values(selected_satellite):
     
     predicted_values = []
     for index, row in results_df.iterrows():
+        date_time_str = str(row['timestamp'])
         azimut = calc_azimut(row['longitude_predicted'])
-        predicted_values.append([row['timestamp'], row['longitude_predicted'], row['latitude_predicted'], azimut])
+        elevation = calc_elevation(datetime.strptime(date_time_str, '%Y-%m-%d %H:%M:%S'), selected_satellite)
+        predicted_values.append([row['timestamp'], row['longitude_predicted'], row['latitude_predicted'], azimut, elevation])
 
     return predicted_values

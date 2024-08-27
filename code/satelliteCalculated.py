@@ -5,7 +5,7 @@ import math
 import os
 from sgp4.api import jday
 from sgp4.api import Satrec
-from skyfield.api import EarthSatellite, load, wgs84
+from skyfield.api import EarthSatellite, load, wgs84, Topos
 
 def add_data(data, new_data):
     data.append(new_data)
@@ -55,6 +55,27 @@ def calc_azimut(lonSAT):
         if lonSAT > lonET:
             az = math.degrees(A)
     return az
+
+def calc_elevation(date_time_str, selected_satellite):
+    satellite_name = selected_satellite['satellite_name']
+    line1 = selected_satellite['line_1']
+    line2 = selected_satellite['line_2']
+    
+    satellite = EarthSatellite(line1, line2, satellite_name, load.timescale())
+    
+    observer_location = Topos('5.704908307157419 N', '72.94039833237998 W')
+    
+    ts = load.timescale()
+    
+    observation_time = date_time_str
+    t = ts.utc(observation_time.year, observation_time.month, observation_time.day,
+            observation_time.hour, observation_time.minute, observation_time.second)
+    
+    difference = satellite - observer_location
+    topocentric = difference.at(t)
+    
+    alt, az, distance = topocentric.altaz()
+    return alt.degrees
 
 def get_satellite_data(selected_satellite):
     G = 6.67430e-11

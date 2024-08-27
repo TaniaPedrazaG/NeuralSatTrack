@@ -204,7 +204,12 @@ class Interface:
         prediction_date = ttk.DateEntry(control_module, bootstyle="DARK", dateformat='%x')
         prediction_date.pack(fill='x', padx=10, pady= 15)
 
+        def clear_table():
+            for i in tree.get_children():
+                tree.delete(i)
+
         def predict_orbit():
+            clear_table()
             global selected_satellite
             global satellite_predictions
             get_in_range(selected_satellite, prediction_date.entry.get())
@@ -267,7 +272,7 @@ class Interface:
                     world_map.plot([x[i], x[i+1]], [y[i], y[i+1]], 'w-', linewidth=0.5)
 
             if len(satellite_predictions) > 1:
-                time, lons, lats, azi = zip(*satellite_predictions)
+                time, lons, lats, azi, elva = zip(*satellite_predictions)
                 x, y = world_map(list(lons), list(lats))
                 for i in range(len(x)-1):
                     if crosses_antimeridian(lons[i], lons[i+1]):
