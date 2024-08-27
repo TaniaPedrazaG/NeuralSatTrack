@@ -13,10 +13,14 @@
 
 ```python -m venv nombre_entorno```
 
-3. Con el entorno creado, ejecute la siguiente línea para instalar en su entorno virtual los paquetes requeridos por el proyecto
+3. Una vez creado el entorno, debe activarlo ejecutando la siguiente linea
 
 ```source nombre_entorno/bin/activate```
 
-4. Una vez instalados ejecute el siguiente comando para inicializar la herramienta en el entorno local.
+4. Con el entorno activo, ejecute la siguiente línea para instalar en su entorno virtual los paquetes requeridos por el proyecto
+
+```source nombre_entorno/bin/activate```
+
+5. Una vez instalados ejecute el siguiente comando para inicializar la herramienta en el entorno local.
 
 ```python code/__init__.py```
